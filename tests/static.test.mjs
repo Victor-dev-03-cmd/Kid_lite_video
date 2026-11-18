@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v17/);
+  assert.match(file('public/app.js'), /kidlite-offline-v18/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -136,10 +136,10 @@ test('Home begins with channels; heading, age selector and source banner are rem
   assert.match(html, /id="header-search"[^>]*hidden/);
   assert.match(html, /data-channel="tamil"/);
 });
-test('Normal video player lists at most four other allowlisted suggestions', () => {
+test('Normal video player interleaves up to twelve approved suggestions', () => {
   const app = file('public/app.js');
-  assert.match(app, /const candidates = selected => state\.videos/);
-  assert.match(app, /\.slice\(0, 4\)/);
+  assert.match(app, /const candidates = selected => \{/);
+  assert.match(app, /SUGGESTION_LIMIT = 12/);
   assert.match(app, /item\.id !== selected\.id/);
   assert.match(app, /validVideo\(item\)/);
   assert.match(app, /button\.onclick = \(\) => changeVideo\(suggested\)/);
@@ -184,7 +184,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v17/);
+  assert.match(worker,/kidlite-offline-v18/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -216,7 +216,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v17/);
+  assert.match(app,/kidlite-offline-v18/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -295,7 +295,7 @@ test('Now Playing never crops or shields YouTube embedded controls',()=>{
   assert.match(app,/youtube-nocookie\.com\/embed/);
   assert.match(app,/frame\.allowFullscreen = true/);
   assert.match(app,/youtube-icon-link/);
-  assert.match(app,/\.slice\(0,\s*4\)/);
+  assert.match(app,/result\.length < SUGGESTION_LIMIT/);
   assert.doesNotMatch(app,/player-touch-shield|youtube-crop|controls=0/);
   assert.doesNotMatch(css,/height:\s*calc\(100%\s*\+\s*120px\)/);
   assert.doesNotMatch(css,/margin-top:\s*-60px/);
@@ -379,10 +379,10 @@ test('Refresh uses fresh local seed without duplicating YouTube provider calls',
   assert.match(shorts,/sessionSeed:/);
   const sw=file('public/sw.js');
   assert.match(sw,/\/freshness\.js/);
-  assert.match(sw,/kidlite-offline-v17/);
+  assert.match(sw,/kidlite-offline-v18/);
 });
 
-test('Expanded long videos fill the viewport and keep four in-app suggestions',()=>{
+test('Expanded videos show a permanent swipeable suggested-thumbnail strip',()=>{
   const app=file('public/app.js'),css=file('public/styles.css');
   assert.match(css,/\.player-shell:fullscreen/);
   assert.match(css,/width:100vw!important/);
@@ -391,13 +391,13 @@ test('Expanded long videos fill the viewport and keep four in-app suggestions',(
   assert.match(css,/aspect-ratio:auto!important/);
   assert.match(css,/\.player-fullscreen-recommendation-list/);
   assert.match(css,/\.player-fullscreen-recommendations\[hidden\]/);
-  assert.match(app,/className = 'player-fullscreen-next-toggle'/);
+  assert.doesNotMatch(app,/className = 'player-fullscreen-next-toggle'/);
   assert.match(app,/className = 'player-fullscreen-recommendations'/);
   assert.match(app,/compact \? 'player-fullscreen-suggestion'/);
   assert.match(app,/button\.onclick = \(\) => changeVideo\(suggested\)/);
   assert.match(app,/frame\.src = videoUrl\(current\)/);
   assert.match(app,/window\.screen\.orientation\.lock\('landscape'\)/);
-  assert.match(app,/\.slice\(0, 4\)/);
+  assert.match(app,/SUGGESTION_LIMIT = 12/);
 });
 test('Shorts player fills device height without cropping YouTube or covering its controls',()=>{
   const css=file('public/styles.css'),js=file('public/shorts.js');
@@ -446,4 +446,22 @@ test('Full-viewport Shorts gesture layer captures swipes from anywhere',()=>{
   assert.match(css,/\.shorts-full-swipe-surface\{/);
   assert.match(css,/touch-action:none/);
   assert.match(css,/\.shorts-back\{z-index:8!important\}/);
+});
+
+test('Expanded long video shelf has no Up next button and exposes twelve suggestions',()=>{
+  const app=file('public/app.js'),css=file('public/styles.css');
+  assert.match(app,/const SUGGESTION_LIMIT = 12/);
+  assert.match(app,/eligible\.filter\(item => item\.channelKey === selected\.channelKey\)/);
+  assert.match(app,/eligible\.filter\(item => item\.channelKey !== selected\.channelKey\)/);
+  assert.match(app,/result\.push\(discover\[d\+\+\]\)/);
+  assert.match(app,/toolbar\.append\(exit,fullLabel\)/);
+  assert.doesNotMatch(app,/upNext\.onclick/);
+  assert.doesNotMatch(app,/player-fullscreen-next-toggle/);
+  assert.match(app,/expandedSuggestions\.hidden = results\.length === 0/);
+  assert.match(app,/fullscreenList\.replaceChildren/);
+  assert.match(app,/suggestionsList\.replaceChildren/);
+  assert.match(app,/button\.onclick = \(\) => changeVideo\(suggested\)/);
+  assert.match(css,/scroll-snap-type:x proximity/);
+  assert.match(css,/touch-action:pan-x/);
+  assert.match(css,/height:82px!important/);
 });

@@ -179,3 +179,11 @@ Their source IDs/handles are fixed server-side, never user-supplied to the YouTu
 - **YouTube compliance warning:** this experimental gesture surface intercepts taps/gestures intended for YouTube's embedded player, including possible advertising/attribution interactions, and is **likely inconsistent** with YouTube API Services embedded-player interaction requirements. Do not consider this production-compliant without written approval from YouTube or a switch to rights-cleared, native KidLite video files. There is a risk of player/API restriction.
 - This is code and endpoint validation, not a successful real-device swipe test. The gesture layer may behave differently on iOS Safari and Android browsers.
 - Service Worker cache v17.
+
+## Phase 1.19 — Twelve suggestions and button-free fullscreen discovery
+
+- **Now Playing (normal mode):** increase KidLite-authored video suggestions from 4 to **up to 12**, using the server's approved-channel feed only. Recommendation order interleaves two same-channel videos with one from other approved channels whenever available, excluding the currently playing video.
+- **Expanded landscape playback:** remove the small upper-corner **Up next** toggle entirely. A visually discoverable, always-visible horizontal strip of video thumbnails sits **below**, not over, the YouTube iframe. Children can horizontally swipe through the thumbnail strip and tap a thumbnail to switch videos while remaining in fullscreen.
+- Use a compact 82 px strip (72 px in shorter landscape viewports) to leave the rest of the screen for YouTube playback; thumbnails lazy-load, snap while scrolling, and do not require a button to reveal them.
+- If fewer approved videos are available, display only those; never invent suggestions or fetch arbitrary YouTube related results. Keep YouTube's own controls, ads, branding and fullscreen orientation support unaffected.
+- Service worker app-shell version v18. Performance and mobile landscape layout still require real-device QA.

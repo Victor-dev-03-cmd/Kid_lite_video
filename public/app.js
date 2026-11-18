@@ -287,10 +287,23 @@
   function showVideo(video) {
     if (!validVideo(video) || !state.videos.some(item => item.id === video.id)) return;
     let current = video;
-    const candidates = selected => state.videos
-      .filter(item => validVideo(item) && item.id !== selected.id)
-      .sort((a,b) => Number(b.channelKey===selected.channelKey)-Number(a.channelKey===selected.channelKey))
-      .slice(0, 4);
+    // Keep recommendations limited to the currently server-validated feed,
+    // interleaving related videos with fresh discovery across approved channels.
+    const SUGGESTION_LIMIT = 12;
+    const candidates = selected => {
+      const eligible = state.videos.filter(item => validVideo(item) && item.id !== selected.id);
+      const related = eligible.filter(item => item.channelKey === selected.channelKey);
+      const discover = eligible.filter(item => item.channelKey !== selected.channelKey);
+      const result = [];
+      let r = 0, d = 0;
+      while (result.length < SUGGESTION_LIMIT && (r < related.length || d < discover.length)) {
+        for (let n = 0; n < 2 && r < related.length && result.length < SUGGESTION_LIMIT; n++) {
+          result.push(related[r++]);
+        }
+        if (d < discover.length && result.length < SUGGESTION_LIMIT) result.push(discover[d++]);
+      }
+      return result;
+    };
     freshness?.markWatched(video.id);
 
     showActivity('Watch video', node => {
@@ -307,13 +320,9 @@
       const fullLabel = document.createElement('span');
       fullLabel.className = 'player-fullscreen-label';
       fullLabel.textContent = 'YouTube';
-      const upNext = document.createElement('button');
-      upNext.type = 'button';
-      upNext.className = 'player-fullscreen-next-toggle';
-      upNext.textContent = 'Up next (4)';
-      upNext.setAttribute('aria-label','Show up to four suggested videos');
-      upNext.setAttribute('aria-expanded','false');
-      toolbar.append(exit,fullLabel,upNext);
+      // No discovery button: suggested thumbnails are directly visible below the
+      // fullscreen player, where children can swipe the strip horizontally.
+      toolbar.append(exit,fullLabel);
 
       const frameHolder = document.createElement('div');
       frameHolder.className = 'video-player';
@@ -330,8 +339,7 @@
 
       const expandedSuggestions = document.createElement('section');
       expandedSuggestions.className = 'player-fullscreen-recommendations';
-      expandedSuggestions.hidden = true;
-      expandedSuggestions.setAttribute('aria-label','Up to four approved video suggestions');
+      expandedSuggestions.setAttribute('aria-label','Suggested approved videos — swipe thumbnails sideways');
       const fullscreenList = document.createElement('div');
       fullscreenList.className = 'player-fullscreen-recommendation-list';
       expandedSuggestions.append(fullscreenList);
@@ -364,7 +372,7 @@
 
       const suggestionsSection = document.createElement('section');
       suggestionsSection.className = 'video-suggestions';
-      suggestionsSection.setAttribute('aria-label','Up to four suggested videos');
+      suggestionsSection.setAttribute('aria-label','Suggested videos from approved channels');
       const suggestionsTitle = document.createElement('h3');
       suggestionsTitle.textContent = 'Up next';
       const suggestionsList = document.createElement('div');
@@ -376,11 +384,6 @@
       let orientationLocked = false;
       let enteredFullscreen = false;
 
-      const closeExpandedList = () => {
-        expandedSuggestions.hidden = true;
-        upNext.setAttribute('aria-expanded','false');
-        upNext.textContent = 'Up next (4)';
-      };
       const createSuggestion = (suggested,compact) => {
         const button = document.createElement('button');
         button.type = 'button';
@@ -407,10 +410,9 @@
         const results = candidates(current);
         suggestionsList.replaceChildren(...results.map(item => createSuggestion(item,false)));
         fullscreenList.replaceChildren(...results.map(item => createSuggestion(item,true)));
-        upNext.textContent = 'Up next ('+results.length+')';
-        upNext.disabled = results.length===0;
-        suggestionsSection.hidden = results.length===0;
-        if(!results.length)closeExpandedList();
+        suggestionsTitle.textContent = 'More videos (' + results.length + ')';
+        expandedSuggestions.hidden = results.length === 0;
+        suggestionsSection.hidden = results.length === 0;
       };
       const changeVideo = selected => {
         if(disposed || !validVideo(selected) || !state.videos.some(item=>item.id===selected.id))return;
@@ -422,20 +424,12 @@
         frame.title = current.title + ' on YouTube';
         channel.textContent = current.channel + ' · YouTube';
         youtubeLink.href = 'https://www.youtube.com/watch?v=' + current.id;
-        closeExpandedList();
         renderSuggestions();
         if(document.fullscreenElement !== shell)node.scrollIntoView({block:'start',behavior:'instant'});
       };
       channel.textContent = current.channel + ' · YouTube';
       youtubeLink.href = 'https://www.youtube.com/watch?v=' + current.id;
       renderSuggestions();
-      upNext.onclick = () => {
-        const showing = !expandedSuggestions.hidden;
-        expandedSuggestions.hidden = showing;
-        upNext.setAttribute('aria-expanded',String(!showing));
-        upNext.textContent = showing ? 'Up next ('+candidates(current).length+')' : 'Hide suggestions';
-      };
-
       const unlockOrientation = () => {
         if (!orientationLocked) return;
         orientationLocked = false;
@@ -445,7 +439,6 @@
         const inFullscreen = document.fullscreenElement === shell;
         if (enteredFullscreen && !inFullscreen) {
           enteredFullscreen = false;
-          closeExpandedList();
           unlockOrientation();
           status.textContent = '';
           fullLabel.textContent = 'YouTube';
@@ -730,7 +723,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v17');
+      const cache=await caches.open('kidlite-offline-v18');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

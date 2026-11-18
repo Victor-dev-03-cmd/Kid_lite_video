@@ -504,3 +504,66 @@ html:has(.home-view:not(.hidden)){overscroll-behavior-y:contain}
 .shorts-stage>.shorts-rail-right{right:0}
 .shorts-video-slot{width:100%!important;flex:1 1 100%!important}
 .shorts-video-slot .shorts-player{width:100%!important}
+
+/* Kid-friendly suggested video gallery. No hidden "Up next" corner button:
+   compact, permanently visible thumbnail filmstrip BELOW the fullscreen player. */
+.player-fullscreen-next-toggle{display:none!important}
+.player-fullscreen-recommendations[hidden]{display:none!important}
+.player-shell:fullscreen .player-fullscreen-recommendations:not([hidden]),
+.player-shell:-webkit-full-screen .player-fullscreen-recommendations:not([hidden]){
+  display:block!important;
+  flex:0 0 82px!important;
+  width:100%!important;
+  height:82px!important;
+  min-height:0!important;
+  padding:5px 9px 5px!important;
+  overflow:hidden;
+  background:#111116;
+  border-top:1px solid #ffffff25;
+}
+.player-fullscreen-recommendation-list{
+  display:flex!important;
+  width:100%;
+  height:100%;
+  min-height:0;
+  gap:10px;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scroll-snap-type:x proximity;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x;
+  scrollbar-width:none;
+}
+.player-fullscreen-suggestion{
+  flex:0 0 106px;
+  min-width:106px;
+  max-width:106px;
+  gap:2px;
+  scroll-snap-align:start;
+  min-height:0;
+  align-items:stretch;
+  touch-action:manipulation;
+}
+.player-fullscreen-suggestion img{
+  width:100%!important;
+  height:56px!important;
+  flex:none;
+  object-fit:cover;
+  border-radius:6px;
+}
+.player-fullscreen-suggestion .suggestion-details strong{
+  font-size:10px;
+  line-height:1.2;
+  -webkit-line-clamp:1;
+}
+.player-fullscreen-suggestion:focus-visible{outline:2px solid #ad8eff;outline-offset:-1px}
+.player-fullscreen-suggestion:active{opacity:.78}
+@media(max-height:380px) and (orientation:landscape){
+  .player-shell:fullscreen .player-fullscreen-recommendations:not([hidden]),
+  .player-shell:-webkit-full-screen .player-fullscreen-recommendations:not([hidden]){
+    height:72px!important;flex-basis:72px!important;padding:4px 7px!important
+  }
+  .player-fullscreen-suggestion{flex-basis:95px;min-width:95px;max-width:95px}
+  .player-fullscreen-suggestion img{height:46px!important}
+}
