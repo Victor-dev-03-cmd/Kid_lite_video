@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v9/);
+  assert.match(file('public/app.js'), /kidlite-offline-v10/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -173,4 +173,47 @@ test('Long video feed batches cards and cancels superseded requests', () => {
   assert.match(js, /feedCache:new Map/);
   assert.match(js, /returnScrollY/);
   assert.match(js, /requestAnimationFrame/);
+});
+
+test('Installed PWA supports fullscreen with fallback and script is locally cached',()=>{
+  const manifest=JSON.parse(file('public/manifest.json'));
+  assert.equal(manifest.display,'fullscreen');
+  assert.ok(manifest.display_override.includes('standalone'));
+  const html=file('public/index.html');
+  assert.match(html,/src="\/catalogue\.js"/);
+  assert.match(html,/apple-mobile-web-app-capable/);
+  const worker=file('public/sw.js');
+  assert.match(worker,/kidlite-offline-v10/);
+  assert.match(worker,/\/catalogue\.js/);
+  assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
+});
+test('Shorts use full-bleed player, invisible swipe strips and no bulky buttons',()=>{
+  const js=file('public/shorts.js'),css=file('public/styles.css');
+  assert.match(js,/requestFullscreen/);
+  assert.match(js,/shorts-swipe-rail/);
+  assert.match(js,/pointerup/);
+  assert.match(js,/s\.slot\.replaceChildren\(\)/);
+  assert.doesNotMatch(js,/shorts-skip/);
+  assert.match(css,/shorts-video-slot \.shorts-player/);
+  assert.match(css,/flex-basis:14px/);
+});
+test('Offline metadata sync is bounded, incremental and keeps YouTube media uncached',()=>{
+  const js=file('public/catalogue.js');
+  assert.match(js,/indexedDB\.open/);
+  assert.match(js,/MAX_ITEMS=1100/);
+  assert.match(js,/MAX_CHARS=460000/);
+  assert.match(js,/if\(!keep\.has\(old\.key\)\)table\.delete/);
+  assert.match(js,/if\(JSON\.stringify\(previous\.get\(item\.key\)\)!==JSON\.stringify\(item\)\)/);
+  assert.match(js,/longs\.mode!=='youtube-live'/);
+  assert.match(js,/shorts\.mode!=='youtube-live'/);
+  assert.match(js,/onlineOnly:true/);
+  assert.doesNotMatch(js,/youtube-nocookie\.com\/embed/);
+});
+test('Offline Play offers saved titles but does not pretend YouTube plays offline',()=>{
+  const app=file('public/app.js');
+  assert.match(app,/function showSavedCatalogue/);
+  assert.match(app,/YouTube playback needs internet/);
+  assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
+  assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
+  assert.match(app,/kidlite-offline-v10/);
 });

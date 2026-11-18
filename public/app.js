@@ -199,6 +199,25 @@
       displayVideos(videos,notice);
     } catch (error) {
       if (requestNumber !== state.requestNumber || error?.name === 'AbortError') return;
+      // Show text-only cached titles without presenting them as playable offline videos.
+      if (window.KidLiteCatalogue) {
+        const cached=await window.KidLiteCatalogue.getItems({kind:'video',channel:state.channel,q:search.value});
+        if (requestNumber !== state.requestNumber) return;
+        disconnectFeedObserver();feed.replaceChildren();
+        if(cached.length){
+          const notice=document.createElement('p');notice.className='offline-catalog-note';
+          notice.textContent='Offline titles only · YouTube playback requires internet';
+          feed.append(notice);
+          for(const item of cached.slice(0,25)){
+            const row=document.createElement('div');row.className='offline-catalog-row';
+            const title=document.createElement('strong');title.textContent=item.title;
+            const by=document.createElement('small');by.textContent=item.channel+' · Internet required';
+            row.append(title,by);feed.append(row);
+          }
+          feedStatus.textContent='Last synced catalogue. Open Offline Play for games without internet.';
+          return;
+        }
+      }
       feedStatus.textContent = 'Could not load videos. Check the connection and retry.';
       const retry = document.createElement('button');
       retry.type = 'button';retry.className = 'text-button';retry.textContent = 'Retry';
@@ -321,6 +340,74 @@
     { title:'Brain Games', className:'games', image:'games.svg', action: node => window.KidLiteOffline.memory(node) },
     { title:'Offline Play', className:'play', image:'offline.svg', action: node => shortSlides(node, 'Offline Play', [['🎨','Try a color game.'],['📖','Read a picture story.'],['🎵','Listen to a gentle lullaby.']]) }
   ];
+  // Cached YouTube metadata is browseable offline; official YouTube playback still needs internet.
+  async function showSavedCatalogue() {
+    showActivity('Saved video titles', node => {
+      const info = document.createElement('div');
+      info.className = 'offline-catalog-note';
+      info.textContent = 'Video titles can be browsed offline. YouTube videos themselves need internet. Only original games and stories play offline.';
+      const status = document.createElement('p'); status.className = 'offline-catalog-status';
+      status.textContent = 'Reading saved titles…';
+      const actions = document.createElement('div'); actions.className = 'offline-catalog-actions';
+      const refresh = document.createElement('button'); refresh.className = 'text-button'; refresh.type = 'button';
+      refresh.textContent = 'Sync latest titles';
+      const clear = document.createElement('button'); clear.className = 'text-button'; clear.type = 'button';
+      clear.textContent = 'Clear saved titles';
+      actions.append(refresh,clear);
+      const list = document.createElement('div'); list.className = 'offline-catalog-list';
+      node.append(info,status,actions,list);
+      let count=0;
+      async function draw() {
+        const catalog = window.KidLiteCatalogue;
+        if (!catalog) {status.textContent = 'Offline storage is unavailable.'; return;}
+        const [meta,items] = await Promise.all([catalog.getStatus(),catalog.getItems({channel:'all'})]);
+        count=items.length;
+        status.textContent = count
+          ? count+' saved titles · '+(meta.shorts||0)+' Shorts · Last synced '+new Date(meta.updatedAt).toLocaleDateString()
+          : 'No video titles saved yet. Connect to the internet to sync them.';
+        list.replaceChildren();
+        // Show only 25 initially to avoid creating large DOMs offline.
+        const initial=items.slice(0,25);
+        const makeRow = item => {
+          const row=document.createElement('div');row.className='offline-catalog-row';
+          const name=document.createElement('strong');name.textContent=item.title;
+          const subtitle=document.createElement('small');subtitle.textContent=item.channel+' · '+(item.kind==='short'?'Short':'Video')+' · Online playback only';
+          row.append(name,subtitle);return row;
+        };
+        initial.forEach(item=>list.appendChild(makeRow(item)));
+        if(items.length>25) {
+          const more=document.createElement('button');more.type='button';more.className='text-button';
+          more.textContent='Show '+(items.length-25)+' more titles';
+          let index=25;
+          more.onclick=()=>{
+            const fragment=document.createDocumentFragment();
+            for(const item of items.slice(index,index+25))fragment.appendChild(makeRow(item));
+            list.insertBefore(fragment,more);
+            index=Math.min(index+25,items.length);
+            more.textContent='Show '+(items.length-index)+' more titles';
+            if(index>=items.length)more.remove();
+          };
+          list.append(more);
+        }
+      }
+      refresh.onclick=async()=>{
+        if(navigator.onLine===false){status.textContent='Connect to the internet to refresh.';return;}
+        refresh.disabled=true;status.textContent='Checking the latest video titles…';
+        try {
+          const result=await window.KidLiteCatalogue.synchronize(true);
+          if(!result.ok) status.textContent='Could not complete refresh; previous saved titles are kept.';
+          else await draw();
+        } finally {refresh.disabled=false;}
+      };
+      clear.onclick=async()=>{
+        if(!window.confirm('Delete the locally saved video titles? Original offline games are not affected.'))return;
+        try {await window.KidLiteCatalogue.clear();await draw();}
+        catch (_) {status.textContent='Could not clear saved titles.';}
+      };
+      draw().catch(()=>{status.textContent='Offline catalogue is not supported on this device.';});
+    },'offline',showOffline);
+  }
+
   function showOffline() {
     showActivity('Offline Play', node => {
       const info = document.createElement('div'); info.className = 'offline-intro';
@@ -338,6 +425,11 @@
         grid.appendChild(button);
       });
       node.appendChild(grid);
+      const saved = document.createElement('button');
+      saved.type='button';saved.className='offline-catalogue-trigger';
+      saved.innerHTML='<span aria-hidden="true">📋</span><span><strong>Saved video titles</strong><small>Browse the last synced list without data · YouTube playback needs internet</small></span><span aria-hidden="true">›</span>';
+      saved.onclick=showSavedCatalogue;
+      node.appendChild(saved);
     }, 'offline', showHome);
   }
 
@@ -374,6 +466,7 @@
         else document.getElementById('clerk-user-button')?.querySelector('button')?.click();
       });
       item(general,'📚','Offline Play','Stories, mini shorts and games',showOffline);
+      item(general,'📋','Saved video titles','Lightweight offline catalogue',showSavedCatalogue);
       item(general,'↓','Install KidLite','Save to home screen',() => document.getElementById('install-btn').click());
       const channelSection = section('Your selected channels');
       item(channelSection,'🍉','CoComelon','Parent selected',null,true);
@@ -442,7 +535,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v9');
+      const cache=await caches.open('kidlite-offline-v10');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

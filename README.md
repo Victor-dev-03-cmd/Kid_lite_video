@@ -100,3 +100,11 @@ Do not launch the child-directed product broadly until YouTube child-directed AP
 - Only one YouTube player exists during Shorts playback. Navigating to the next clip destroys the prior iframe. Thumbnail prefetching was removed to reduce data usage.
 - The app shell/service worker cache moved to v9, and YouTube audiovisual content remains uncached.
 - This is an engineering performance pass, not a measured speed guarantee; actual phones still need manual scrolling/playback tests.
+
+## Phase 1.11 — Fullscreen Shorts and offline metadata catalogue
+
+- Shorts player enlarged: invisible 14–17 px edge swipe strips replace visible Previous/Next arrows, and supported mobile browsers request fullscreen. PWA manifest advertises fullscreen with standalone fallback. YouTube still owns gestures inside its iframe.
+- Added IndexedDB catalogue metadata sync, online refresh, deletion of stale/disappeared titles after a successful full refresh, low data/entry count caps, and manual sync/clear under Offline Play.
+- Last saved video titles are viewable without internet but explicitly **not playable** as YouTube video downloads are not allowed without approval; original offline stories/games remain available.
+- Service worker version v10 precaches only first-party app assets, excluding remote video content.
+- See docs/OFFLINE_ARCHITECTURE_V2.md for limits and the rights-cleared media strategy.
