@@ -174,6 +174,32 @@
     const stage=document.createElement('div');stage.className='shorts-stage';
     const slot=document.createElement('div');slot.className='shorts-video-slot';
     stage.append(makeRail('left'),slot,makeRail('right'));
+    // Extra gesture surface: the black area above/below the centred video.
+    // YouTube's iframe itself is never covered or intercepted.
+    let outerStart = null;
+    slot.addEventListener('pointerdown',event=>{
+      if(event.target!==slot || event.isPrimary===false)return;
+      outerStart={id:event.pointerId,y:event.clientY,x:event.clientX};
+      try {slot.setPointerCapture(event.pointerId);}catch(_){}
+    });
+    slot.addEventListener('pointerup',event=>{
+      if(!outerStart || event.pointerId!==outerStart.id)return;
+      const dy=event.clientY-outerStart.y,dx=event.clientX-outerStart.x;
+      outerStart=null;
+      if(Math.abs(dy)>30 && Math.abs(dy)>Math.abs(dx))navigate(dy<0?1:-1);
+    });
+    slot.addEventListener('pointercancel',()=>{outerStart=null;});
+    if(!('PointerEvent' in window)){
+      let from=null;
+      slot.addEventListener('touchstart',event=>{
+        if(event.target===slot && event.touches.length===1)from=event.touches[0].clientY;
+      },{passive:true});
+      slot.addEventListener('touchend',event=>{
+        if(from===null||!event.changedTouches.length)return;
+        const delta=event.changedTouches[0].clientY-from;from=null;
+        if(Math.abs(delta)>30)navigate(delta<0?1:-1);
+      },{passive:true});
+    }
     const description=document.createElement('p');
     description.className='sr-only';description.setAttribute('aria-live','polite');
     overlay.append(stage,back,description);

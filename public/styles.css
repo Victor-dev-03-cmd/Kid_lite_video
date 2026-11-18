@@ -246,3 +246,6 @@ html{overscroll-behavior-y:auto}
 .offline-catalog-row strong{font-size:13px;line-height:1.4;font-weight:740}
 .offline-catalog-row small{font-size:11px;line-height:1.5;color:#838594}
 .offline-catalog-list{display:grid;gap:0}
+
+/* Black letterbox region also supports swipe; embedded video touch events stay native. */
+.shorts-video-slot{touch-action:none}
