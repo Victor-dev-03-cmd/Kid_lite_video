@@ -162,7 +162,7 @@
       const motionButton = item(prefs, '✨', 'Reduce motion', 'Simpler animations', null);
       const motionRow = document.createElement('label');
       motionRow.className = 'settings-row';
-      motionRow.append(motionButton.firstElementChild, motionButton.firstElementChild);
+      motionRow.append(...Array.from(motionButton.children).slice(0, 2));
       motionButton.replaceWith(motionRow);
       const toggle = document.createElement('input');
       toggle.type = 'checkbox';
