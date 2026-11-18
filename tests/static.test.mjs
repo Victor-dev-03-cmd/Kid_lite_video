@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v19/);
+  assert.match(file('public/app.js'), /kidlite-offline-v20/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -184,7 +184,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v19/);
+  assert.match(worker,/kidlite-offline-v20/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -216,7 +216,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v19/);
+  assert.match(app,/kidlite-offline-v20/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -379,7 +379,7 @@ test('Refresh uses fresh local seed without duplicating YouTube provider calls',
   assert.match(shorts,/sessionSeed:/);
   const sw=file('public/sw.js');
   assert.match(sw,/\/freshness\.js/);
-  assert.match(sw,/kidlite-offline-v19/);
+  assert.match(sw,/kidlite-offline-v20/);
 });
 
 test('Expanded videos show a permanent swipeable suggested-thumbnail strip',()=>{
@@ -496,7 +496,7 @@ test('Rights-cleared media downloads are verified and bounded to 100 MB total',(
 });
 test('Offline media is not double cached by service worker',()=>{
   const sw=file('public/sw.js');
-  assert.match(sw,/kidlite-offline-v19/);
+  assert.match(sw,/kidlite-offline-v20/);
   assert.match(sw,/\/offline-pack\.js/);
   assert.match(sw,/\/offline-pack-ui\.js/);
   assert.match(sw,/\/offline-video-manifest\.json/);
@@ -519,4 +519,35 @@ test('Pack uses explicit consent, locally playable blobs, daily opt-in and guard
   assert.match(pack,/window\.KidLiteOfflinePack/);
   assert.equal(pkg.scripts['check:offline-media'],'node scripts/verify-offline-video-pack.mjs');
   assert.ok(existsSync(path.join(root,'scripts/verify-offline-video-pack.mjs')));
+});
+
+test('Iconsax SVGs render as app-integrated icons with no network font requirement',()=>{
+  const js=file('public/iconsax.js'),html=file('public/index.html'),sw=file('public/sw.js');
+  assert.match(js,/Iconsax \(Vuesax\) integrated SVG icons/);
+  assert.match(js,/const ICONS=Object\.freeze/);
+  for(const name of ['arrow-left','arrow-right','home','shorts','offline','settings','search','notification']){
+    assert.ok(js.includes('"'+name+'":'),name);
+  }
+  assert.match(js,/svg\.setAttribute\('aria-hidden','true'\)/);
+  assert.match(js,/svg\.classList\.add\('iconsax-icon'\)/);
+  assert.match(js,/enhance\(\)/);
+  assert.match(html,/src="\/iconsax\.js"/);
+  assert.match(sw,/\/iconsax\.js/);
+  assert.doesNotMatch(js,/https:\/\/cdn\.|@font-face|fetch\(/);
+  for(const name of ['home','shorts','offline','settings']){
+    assert.match(html,new RegExp('data-iconsax="'+name+'"'));
+  }
+});
+test('Iconsax back arrows stay centered in 44px mobile touch targets',()=>{
+  const app=file('public/app.js'),shorts=file('public/shorts.js'),css=file('public/styles.css');
+  assert.match(app,/KidLiteIconsax\?\.create\('arrow-left',24\)/);
+  assert.match(app,/KidLiteIconsax\?\.create\('arrow-left',18\)/);
+  assert.match(shorts,/KidLiteIconsax\?\.create\('arrow-left',24\)/);
+  assert.match(app,/KidLiteIconsax\?\.create\('arrow-right',18\)/);
+  assert.match(css,/\.back-button,\.shorts-back\{/);
+  assert.match(css,/place-items:center!important/);
+  assert.match(css,/width:44px!important/);
+  assert.match(css,/height:44px!important/);
+  assert.match(css,/padding:0!important/);
+  assert.match(css,/line-height:0!important/);
 });

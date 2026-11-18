@@ -72,7 +72,8 @@
     head.className = 'activity-header';
     const arrow = document.createElement('button');
     arrow.className = 'back-button'; arrow.type = 'button';
-    arrow.textContent = '←'; arrow.setAttribute('aria-label', 'Go back');
+    arrow.replaceChildren(window.KidLiteIconsax?.create('arrow-left',24) || document.createTextNode('←'));
+    arrow.setAttribute('aria-label', 'Go back');
     arrow.onclick = back;
     const heading = document.createElement('h1'); heading.textContent = title;
     head.append(arrow, heading);
@@ -337,7 +338,10 @@
       const exit = document.createElement('button');
       exit.type = 'button';
       exit.className = 'player-exit-fullscreen';
-      exit.textContent = '← Exit';
+      exit.replaceChildren(
+        window.KidLiteIconsax?.create('arrow-left',18) || document.createTextNode('←'),
+        document.createTextNode('Exit')
+      );
       exit.setAttribute('aria-label','Exit fullscreen');
       const fullLabel = document.createElement('span');
       fullLabel.className = 'player-fullscreen-label';
@@ -681,7 +685,9 @@
         const label = document.createElement('strong'); label.textContent = title;
         const hint = document.createElement('small'); hint.textContent = note;
         text.append(label, hint);
-        const arrow = document.createElement('span'); arrow.className = 'settings-row-end'; arrow.textContent = disabled ? 'Soon' : '›';
+        const arrow = document.createElement('span'); arrow.className = 'settings-row-end';
+        if(disabled)arrow.textContent='Soon';
+        else arrow.replaceChildren(window.KidLiteIconsax?.create('arrow-right',18) || document.createTextNode('›'));
         button.append(emoji, text, arrow);
         if (onClick) button.onclick = onClick;
         parent.appendChild(button);
@@ -766,7 +772,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v19');
+      const cache=await caches.open('kidlite-offline-v20');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

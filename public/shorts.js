@@ -392,7 +392,8 @@
     overlay.setAttribute('aria-label','Fullscreen YouTube Shorts');
     const back = document.createElement('button');
     back.type='button';back.className='shorts-back';
-    back.textContent='←';back.setAttribute('aria-label','Back to home');
+    back.replaceChildren(window.KidLiteIconsax?.create('arrow-left',24) || document.createTextNode('←'));
+    back.setAttribute('aria-label','Back to home');
     back.onclick=close;
     // Kid-only viewing mode: no extra Play/Pause button obscures the portrait video.
     const stage=document.createElement('div');stage.className='shorts-stage';

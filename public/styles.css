@@ -596,3 +596,35 @@ html:has(.home-view:not(.hidden)){overscroll-behavior-y:contain}
 .offline-pack-play{background:#785cdd;color:white;border-color:#785cdd}
 .offline-pack-video{width:100%;max-height:62dvh;aspect-ratio:16/9;object-fit:contain;display:block;background:#08080c;border-radius:13px;margin:12px 0}
 @media(prefers-reduced-motion:reduce){.offline-pack-meter-fill{transition:none}}
+
+/* Iconsax integrated SVGs: consistent viewBox centering, not font-glyph baseline. */
+.iconsax-icon{display:block;flex:0 0 auto;vertical-align:middle;color:inherit;pointer-events:none}
+.back-button,.shorts-back{
+  box-sizing:border-box!important;
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 44px!important;
+  width:44px!important;
+  height:44px!important;
+  min-width:44px!important;
+  min-height:44px!important;
+  padding:0!important;
+  margin:0!important;
+  line-height:0!important;
+  text-align:center!important;
+}
+.back-button .iconsax-icon,.shorts-back .iconsax-icon{
+  display:block!important;width:24px!important;height:24px!important;
+  margin:0!important;transform:none!important;
+}
+.back-button{color:#292d32;border-radius:13px;background:#f3f2f7}
+.shorts-back{color:#fff;border-radius:50%}
+.back-button:focus-visible,.shorts-back:focus-visible{outline:3px solid #a88dff;outline-offset:2px}
+.activity-header{display:flex;align-items:center;gap:12px}
+.activity-header h1{min-width:0;flex:1;line-height:1.3;overflow-wrap:anywhere}
+.player-exit-fullscreen{display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1.2}
+.player-exit-fullscreen .iconsax-icon{width:18px;height:18px}
+.dock-button svg.iconsax-icon{width:22px;height:22px;fill:none;overflow:visible}
+.top-icon svg.iconsax-icon,.search-field svg.iconsax-icon{width:22px;height:22px;fill:none}
+.settings-row-end{display:grid;place-items:center;flex:0 0 20px;min-height:20px}
+.settings-row-end .iconsax-icon{width:18px;height:18px}

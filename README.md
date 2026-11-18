@@ -197,3 +197,10 @@ Their source IDs/handles are fixed server-side, never user-supplied to the YouTu
 - Only admin-allowlisted same-origin **/owned-media/** MP4/WebM assets with explicit owned/licensed-offline rights, size/mime constraints, supported phone codec and **SHA-256 verification** can be saved. Store one Blob per file in IndexedDB; SW will never duplicate these URLs. No Supabase Storage data used.
 - Atomic admission/eviction: watched items and then old items are removed if needed, preserving the currently playing file. Parent can remove individual downloads or clear the owned-media pack; it does not erase games. Browser StorageManager persistence is requested on explicit download.
 - Production safety check: **npm run check:offline-media** inspects the files, hashes, file counts, byte budgets and excludes YouTube references. See docs/OFFLINE_VIDEO_PACK_100MB.md for uploading and rights review.
+
+## Phase 1.21 — Centered back arrows and integrated Iconsax navigation
+
+- Replaced text-character back arrows with genuine Iconsax arrow-left SVGs in activity pages, fullscreen long videos, and immersive Shorts. The icons align in centered 44 x 44 mobile touch targets with no padding or baseline offset.
+- Replaced Home / Shorts / Offline / Settings dock artwork, search and notification icons with integrated Iconsax icon shapes. Settings navigation chevrons use Iconsax arrow-right. Accessible button labels remain.
+- Eight selected Iconsax/Vuesax shapes are embedded within public/iconsax.js, obtained from glenthemes/iconsax and used as a part of this application. They use currentColor, have no font files and make no network request at runtime; the script is precached by service worker v20.
+- Playback, swipes, downloads and privacy settings remain unchanged.
