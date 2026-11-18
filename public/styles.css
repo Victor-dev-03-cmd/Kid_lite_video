@@ -275,3 +275,25 @@ html{overscroll-behavior-y:auto}
 }
 .shorts-video-slot .shorts-player iframe{position:relative;z-index:1}
 .shorts-video-slot .shorts-player.shorts-buffering{background-color:#101018}
+
+/* Clean Now Playing: fullscreen controls are OUTSIDE the official YouTube iframe.
+   Never crop, shift or shield YouTube's controls, logos, captions or advertising. */
+.activity-view:has(.player-shell) .activity-header{margin-bottom:10px}
+.activity-view:has(.player-shell) .activity-header h1{display:none}
+.player-shell{width:100%;position:relative}
+.player-shell .video-player{width:100%;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#09090c}
+.player-shell .video-player iframe{display:block;width:100%;height:100%;border:0}
+.player-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 12px}
+.player-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.player-expand{min-height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:7px 11px;border:1px solid #e9e7f0;border-radius:11px;background:#fff;color:#313148;font-size:12px;font-weight:750}
+.player-expand svg{width:17px;height:17px}
+.player-expand:active{background:#f0ebff}
+.player-orientation-status{font-size:12px;line-height:1.55;color:#7c668c;margin:3px 0 10px}
+.player-orientation-status:empty{display:none}
+.player-fullscreen-toolbar{display:none}
+.player-shell:fullscreen,.player-shell:-webkit-full-screen{background:#050507;display:flex;flex-direction:column;justify-content:center;align-items:stretch;width:100vw;height:100dvh;margin:0;padding:0;overflow:hidden}
+.player-shell:fullscreen .player-fullscreen-toolbar,.player-shell:-webkit-full-screen .player-fullscreen-toolbar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-height:48px;padding:calc(env(safe-area-inset-top,0px) + 6px) 16px 8px;color:#e9eaf0;font-size:11px;font-weight:700}
+.player-exit-fullscreen{border:1px solid #ffffff3b;border-radius:10px;padding:8px 12px;background:#ffffff19;color:white;font-size:12px;font-weight:750}
+.player-shell:fullscreen .video-player,.player-shell:-webkit-full-screen .video-player{width:min(100vw,calc((100dvh - 58px)*16/9));height:auto;max-height:calc(100dvh - 58px - env(safe-area-inset-top,0px));aspect-ratio:16/9;margin:auto;border-radius:0;flex:0 1 auto}
+.player-shell:fullscreen iframe,.player-shell:-webkit-full-screen iframe{width:100%;height:100%;display:block}
+@media(max-width:380px){.player-expand{padding:7px 9px}.player-expand span{font-size:11px}}

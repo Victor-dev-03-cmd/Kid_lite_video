@@ -126,3 +126,11 @@ Do not launch the child-directed product broadly until YouTube child-directed AP
 - Connection hints are added for YouTube API, privacy-enhanced player and ytimg.
 - Posters are applied **behind** the interactive official YouTube iframe, not as overlays on controls/ads. The background is removed on the PLAYING event. Autoplay-block events are handled.
 - This reduces repeated iframe startup overhead but **cannot guarantee zero-delay or 0.2-second video transitions**. Real-device performance measurement is still required.
+
+## Phase 1.14 — Now Playing fullscreen/landscape (compliant)
+
+- In normal long-video playback, KidLite hides its duplicate "Now Playing" page heading and uses a compact row with the YouTube attribution/link and an **Expand** button positioned OUTSIDE the official YouTube iframe. Four approved-channel "Up next" suggestions remain.
+- The in-app Expand button calls requestFullscreen on a local **player-shell** container from a user gesture, then attempts screen.orientation.lock('landscape') after fullscreen resolves. On exit/navigation it unlocks orientation and removes fullscreen listeners.
+- The fullscreen toolbar offers a distinct Exit button and an honest rotate-phone message when orientation lock is unsupported or denied. Screen Orientation Lock is browser/platform dependent (not guaranteed on iOS Safari, or when device OS disallows rotation).
+- YouTube's native title, logo, settings, CC, controls and ads remain unobstructed. We DO NOT crop the iframe or add a touch shield covering the player, which would conflict with YouTube's branding/player requirements.
+- Service-worker application-shell cache version v13. Live mobile landscape verification is still needed.

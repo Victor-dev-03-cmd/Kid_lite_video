@@ -15,6 +15,7 @@
     feedCache:new Map(), returnScrollY:0
   };
   const FEED_CHUNK = 7;
+  let activeVideoSession = null;
 
   function signedIn() { return Boolean(window.KidLiteAuth?.signedIn); }
   function setNav(view) {
@@ -30,6 +31,12 @@
     setNav(view);
   }
   function showActivity(title, render, view = 'offline', back = showHome) {
+    // Stop the previous player and remove its fullscreen/orientation listeners before navigation.
+    if (activeVideoSession) {
+      const previous = activeVideoSession;
+      activeVideoSession = null;
+      previous.dispose();
+    }
     home.classList.add('hidden');
     authScreen.classList.add('hidden');
     activity.classList.remove('hidden');
@@ -49,6 +56,11 @@
     window.scrollTo(0, 0);
   }
   function showHome() {
+    if (activeVideoSession) {
+      const previous = activeVideoSession;
+      activeVideoSession = null;
+      previous.dispose();
+    }
     activity.replaceChildren(); activity.classList.add('hidden');
     updateNav('home');
     if (signedIn()) {
@@ -240,17 +252,31 @@
   });
 
   function showVideo(video) {
-    // Only recommend metadata returned by the server's allowlisted channel feed.
+    // Only suggest videos from the server's approved-channel feed.
     if (!validVideo(video) || !state.videos.some(item => item.id === video.id)) return;
     const suggestions = state.videos
       .filter(item => validVideo(item) && item.id !== video.id)
-      .sort((a, b) => Number(b.channelKey === video.channelKey) - Number(a.channelKey === video.channelKey))
+      .sort((a,b) => Number(b.channelKey===video.channelKey)-Number(a.channelKey===video.channelKey))
       .slice(0, 4);
 
-    showActivity('Now Playing', node => {
+    showActivity('Watch video', node => {
+      const shell = document.createElement('div');
+      shell.className = 'player-shell';
+      const fullToolbar = document.createElement('div');
+      fullToolbar.className = 'player-fullscreen-toolbar';
+      const exit = document.createElement('button');
+      exit.className = 'player-exit-fullscreen';
+      exit.type = 'button';
+      exit.textContent = '← Exit fullscreen';
+      exit.setAttribute('aria-label','Exit fullscreen');
+      const fullLabel = document.createElement('span');
+      fullLabel.textContent = 'YouTube';
+      fullToolbar.append(exit,fullLabel);
+
       const player = document.createElement('div');
       player.className = 'video-player';
       const frame = document.createElement('iframe');
+      // Keep YouTube controls, captions, attribution and ad UI unobstructed.
       frame.src = 'https://www.youtube-nocookie.com/embed/' + video.id + '?rel=0&playsinline=1&autoplay=1';
       frame.title = video.title + ' on YouTube';
       frame.allow = 'autoplay; accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen';
@@ -258,30 +284,116 @@
       frame.loading = 'eager';
       frame.referrerPolicy = 'strict-origin-when-cross-origin';
       player.appendChild(frame);
+      shell.append(fullToolbar,player);
 
-      const heading = document.createElement('h2');
-      heading.className = 'player-title';
-      heading.textContent = video.title;
       const metadata = document.createElement('div');
       metadata.className = 'player-meta';
       const channel = document.createElement('p');
       channel.className = 'player-channel';
       channel.textContent = video.channel + ' · YouTube';
+      const actions = document.createElement('div');
+      actions.className = 'player-actions';
       const youtubeLink = document.createElement('a');
       youtubeLink.className = 'youtube-icon-link';
       youtubeLink.href = 'https://www.youtube.com/watch?v=' + video.id;
       youtubeLink.target = '_blank';
       youtubeLink.rel = 'noopener noreferrer';
       youtubeLink.title = 'Open on YouTube';
-      youtubeLink.setAttribute('aria-label', 'Open on YouTube');
+      youtubeLink.setAttribute('aria-label','Open on YouTube');
       youtubeLink.innerHTML = '<svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="5" fill="#f03c40"/><path d="m10 5 7 4-7 4z" fill="white"/></svg>';
-      metadata.append(channel, youtubeLink);
-      node.append(player, heading, metadata);
+      const expand = document.createElement('button');
+      expand.className = 'player-expand';
+      expand.type = 'button';
+      expand.setAttribute('aria-label','Fullscreen landscape video');
+      expand.title = 'Fullscreen landscape';
+      expand.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5m13-5v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Expand</span>';
+      actions.append(youtubeLink,expand);
+      metadata.append(channel,actions);
+      const status = document.createElement('p');
+      status.className = 'player-orientation-status';
+      status.setAttribute('role','status');
+      node.append(shell,metadata,status);
+
+      let disposed = false;
+      let orientationLocked = false;
+      let enteredFullscreen = false;
+      const unlockOrientation = () => {
+        if (!orientationLocked) return;
+        orientationLocked = false;
+        try { window.screen.orientation?.unlock?.(); } catch (_) {}
+      };
+      const onFullscreenChange = () => {
+        const isFullscreen = document.fullscreenElement === shell;
+        if (enteredFullscreen && !isFullscreen) {
+          enteredFullscreen = false;
+          unlockOrientation();
+          status.textContent = '';
+          fullLabel.textContent = 'YouTube';
+        }
+      };
+      const dispose = () => {
+        if (disposed) return;
+        disposed = true;
+        document.removeEventListener('fullscreenchange',onFullscreenChange);
+        unlockOrientation();
+        if (document.fullscreenElement === shell && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      };
+      document.addEventListener('fullscreenchange',onFullscreenChange);
+      activeVideoSession = {dispose};
+
+      const exitFullscreen = () => {
+        if (document.fullscreenElement === shell && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else {
+          unlockOrientation();
+        }
+      };
+      exit.onclick = exitFullscreen;
+      expand.onclick = async () => {
+        if (disposed) return;
+        status.textContent = '';
+        if (document.fullscreenElement === shell) {
+          exitFullscreen();
+          return;
+        }
+        if (!shell.requestFullscreen) {
+          status.textContent = 'Fullscreen is not supported here. Use the YouTube fullscreen control and rotate your phone.';
+          return;
+        }
+        try {
+          // Must be initiated from the user's button tap.
+          await shell.requestFullscreen({navigationUI:'hide'});
+          if (disposed || document.fullscreenElement !== shell) return;
+          enteredFullscreen = true;
+          // Browser support is not universal, especially on iOS Safari.
+          if (typeof window.screen.orientation?.lock === 'function') {
+            try {
+              await window.screen.orientation.lock('landscape');
+              if (disposed || document.fullscreenElement !== shell) {
+                try { window.screen.orientation.unlock?.(); } catch (_) {}
+                return;
+              }
+              orientationLocked = true;
+              fullLabel.textContent = 'Landscape · YouTube';
+            } catch (_) {
+              fullLabel.textContent = 'Rotate phone for landscape · YouTube';
+              status.textContent = 'Fullscreen is on. Rotate your phone for landscape if it stays in portrait.';
+            }
+          } else {
+            fullLabel.textContent = 'Rotate phone for landscape · YouTube';
+            status.textContent = 'Fullscreen is on. Rotate your phone if landscape is not automatic.';
+          }
+        } catch (_) {
+          status.textContent = 'Browser blocked fullscreen. Use the YouTube fullscreen button instead.';
+        }
+      };
 
       if (suggestions.length) {
         const section = document.createElement('section');
         section.className = 'video-suggestions';
-        section.setAttribute('aria-label', 'Four suggested videos');
+        section.setAttribute('aria-label','Up to four suggested videos');
         const title = document.createElement('h3');
         title.textContent = 'Up next';
         section.appendChild(title);
@@ -291,9 +403,9 @@
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'suggestion-card';
-          button.setAttribute('aria-label', 'Play ' + suggested.title);
+          button.setAttribute('aria-label','Play '+suggested.title);
           const thumb = document.createElement('img');
-          thumb.src = suggested.thumbnail || ('https://i.ytimg.com/vi/' + suggested.id + '/hqdefault.jpg');
+          thumb.src = suggested.thumbnail || ('https://i.ytimg.com/vi/'+suggested.id+'/hqdefault.jpg');
           thumb.alt = '';
           thumb.loading = 'lazy';
           thumb.decoding = 'async';
@@ -303,8 +415,8 @@
           suggestedTitle.textContent = suggested.title;
           const suggestedChannel = document.createElement('small');
           suggestedChannel.textContent = suggested.channel;
-          details.append(suggestedTitle, suggestedChannel);
-          button.append(thumb, details);
+          details.append(suggestedTitle,suggestedChannel);
+          button.append(thumb,details);
           button.onclick = () => showVideo(suggested);
           list.appendChild(button);
         }
@@ -537,7 +649,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v12');
+      const cache=await caches.open('kidlite-offline-v13');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

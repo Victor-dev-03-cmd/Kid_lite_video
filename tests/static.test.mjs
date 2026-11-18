@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v12/);
+  assert.match(file('public/app.js'), /kidlite-offline-v13/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -183,7 +183,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v12/);
+  assert.match(worker,/kidlite-offline-v13/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -215,7 +215,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v12/);
+  assert.match(app,/kidlite-offline-v13/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -271,4 +271,32 @@ test('Player connection hints and compliant poster background',()=>{
   assert.match(html,/dns-prefetch/);
   assert.match(css,/background-position:center center/);
   assert.match(js,/style\.backgroundImage/);
+});
+
+test('Now Playing has a compliant external Expand button and conditional landscape lock',()=>{
+  const app=file('public/app.js'),css=file('public/styles.css');
+  assert.match(app,/showActivity\('Watch video'/);
+  assert.match(app,/className = 'player-shell'/);
+  assert.match(app,/className = 'player-expand'/);
+  assert.match(app,/shell\.requestFullscreen\(\{navigationUI:'hide'\}\)/);
+  assert.match(app,/window\.screen\.orientation\.lock\('landscape'\)/);
+  assert.match(app,/window\.screen\.orientation\?\.unlock\?\.\(\)/);
+  assert.match(app,/fullscreenchange/);
+  assert.match(app,/activeVideoSession = \{dispose\}/);
+  assert.match(app,/typeof window\.screen\.orientation\?\.lock === 'function'/);
+  assert.match(app,/Rotate phone for landscape/);
+  assert.match(app,/window\.screen\.orientation\?\.unlock/);
+  assert.match(css,/\.player-shell:fullscreen/);
+  assert.match(css,/\.player-fullscreen-toolbar/);
+});
+test('Now Playing never crops or shields YouTube embedded controls',()=>{
+  const app=file('public/app.js'),css=file('public/styles.css');
+  assert.match(app,/youtube-nocookie\.com\/embed/);
+  assert.match(app,/frame\.allowFullscreen = true/);
+  assert.match(app,/youtube-icon-link/);
+  assert.match(app,/\.slice\(0,\s*4\)/);
+  assert.doesNotMatch(app,/player-touch-shield|youtube-crop|controls=0/);
+  assert.doesNotMatch(css,/height:\s*calc\(100%\s*\+\s*120px\)/);
+  assert.doesNotMatch(css,/margin-top:\s*-60px/);
+  assert.doesNotMatch(css,/\.player-touch-shield/);
 });
