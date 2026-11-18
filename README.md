@@ -134,3 +134,12 @@ Do not launch the child-directed product broadly until YouTube child-directed AP
 - The fullscreen toolbar offers a distinct Exit button and an honest rotate-phone message when orientation lock is unsupported or denied. Screen Orientation Lock is browser/platform dependent (not guaranteed on iOS Safari, or when device OS disallows rotation).
 - YouTube's native title, logo, settings, CC, controls and ads remain unobstructed. We DO NOT crop the iframe or add a touch shield covering the player, which would conflict with YouTube's branding/player requirements.
 - Service-worker application-shell cache version v13. Live mobile landscape verification is still needed.
+
+## Phase 1.15 — Minimal Shorts playback UI
+
+- Shorts alone uses the official documented YouTube embed `controls=0` and `fs=0` parameters, keeping the existing privacy-enhanced iframe and all mandatory YouTube branding/ads. Long-video playback is unchanged.
+- Captions are **not forced on** (`cc_load_policy=0`), but this does NOT ensure that every user/device will show captions off: YouTube may honor the viewer's preference. There is no supported absolute captions-off guarantee.
+- A single small accessible Play/Pause button is positioned at the app's top-right edge; playback uses the official IFrame API `playVideo()`/`pauseVideo()`. Space/K keys and tapping the app-owned black margins also toggle playback; vertical swipes on app-owned margins change Shorts.
+- The YouTube iframe is still fully interactive; it is **not** covered by a transparent gesture shield and does **not** use `pointer-events:none`. Touches beginning in the iframe cannot be intercepted cross-origin.
+- If the YouTube JavaScript API fails to initialize, the single iframe falls back to native player controls, preserving basic playback accessibility.
+- Service Worker shell cache bumped to v14.

@@ -297,3 +297,21 @@ html{overscroll-behavior-y:auto}
 .player-shell:fullscreen .video-player,.player-shell:-webkit-full-screen .video-player{width:min(100vw,calc((100dvh - 58px)*16/9));height:auto;max-height:calc(100dvh - 58px - env(safe-area-inset-top,0px));aspect-ratio:16/9;margin:auto;border-radius:0;flex:0 1 auto}
 .player-shell:fullscreen iframe,.player-shell:-webkit-full-screen iframe{width:100%;height:100%;display:block}
 @media(max-width:380px){.player-expand{padding:7px 9px}.player-expand span{font-size:11px}}
+
+/* Minimal Shorts controls: swipe on the app-owned border, play/pause via one
+   accessible button. YouTube iframe remains touchable and unobscured. */
+.shorts-pause-toggle{
+  position:absolute;z-index:7;
+  top:calc(env(safe-area-inset-top,0px) + 8px);
+  right:max(8px,env(safe-area-inset-right,0px));
+  display:grid;place-items:center;
+  width:40px;height:40px;
+  border:1px solid #ffffff35;border-radius:50%;
+  background:#111a;color:#fff;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  font-size:19px;font-weight:750;line-height:1;
+  touch-action:manipulation;
+}
+.shorts-pause-toggle[hidden]{display:none!important}
+.shorts-pause-toggle:disabled{opacity:.5}
+.shorts-pause-toggle:focus-visible{outline:3px solid #b69cff;outline-offset:2px}

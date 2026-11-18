@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v13/);
+  assert.match(file('public/app.js'), /kidlite-offline-v14/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -183,7 +183,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v13/);
+  assert.match(worker,/kidlite-offline-v14/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -215,7 +215,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v13/);
+  assert.match(app,/kidlite-offline-v14/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -299,4 +299,29 @@ test('Now Playing never crops or shields YouTube embedded controls',()=>{
   assert.doesNotMatch(css,/height:\s*calc\(100%\s*\+\s*120px\)/);
   assert.doesNotMatch(css,/margin-top:\s*-60px/);
   assert.doesNotMatch(css,/\.player-touch-shield/);
+});
+
+test('Shorts exposes only the requested pause control without masking the YouTube player',()=>{
+  const js=file('public/shorts.js');
+  const css=file('public/styles.css');
+  assert.match(js,/controls:nativeControls\?'1':'0'/);
+  assert.match(js,/fs:nativeControls\?'1':'0'/);
+  assert.match(js,/cc_load_policy:'0'/);
+  assert.match(js,/className='shorts-pause-toggle'/);
+  assert.match(js,/function togglePlayback\(\)/);
+  assert.match(js,/s\.player\.pauseVideo\(\)/);
+  assert.match(js,/s\.player\.playVideo\(\)/);
+  assert.match(js,/aria-label','Pause Short'/);
+  assert.match(js,/function activateNativeControls\(s\)/);
+  assert.match(js,/youtubeEmbed\(s\.requestedId\|\|s\.initialId,true\)/);
+  assert.match(css,/\.shorts-pause-toggle\{/);
+  assert.doesNotMatch(css,/\.shorts-player iframe\s*\{[^}]*pointer-events\s*:\s*none/);
+  assert.doesNotMatch(js,/touch-shield|gesture-overlay/);
+});
+test('Shorts keeps swipe for navigation and tap on the app border for pause',()=>{
+  const js=file('public/shorts.js');
+  assert.match(js,/navigate\(dy < 0 \? 1 : -1\)/);
+  assert.match(js,/togglePlayback\(\);/);
+  assert.match(js,/refreshPauseButton\(s\)/);
+  assert.match(js,/event\.key===' ' \|\| event\.key==='k'/);
 });

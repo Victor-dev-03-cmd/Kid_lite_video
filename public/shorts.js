@@ -7,9 +7,10 @@
   let active = null;
 
   let youtubeApiPromise=null;
-  function youtubeEmbed(id){
+  function youtubeEmbed(id, nativeControls=false){
     const params=new URLSearchParams({
-      enablejsapi:'1',origin:location.origin,playsinline:'1',autoplay:'1',rel:'0'
+      enablejsapi:'1',origin:location.origin,playsinline:'1',autoplay:'1',rel:'0',
+      controls:nativeControls?'1':'0',fs:nativeControls?'1':'0',cc_load_policy:'0'
     });
     return 'https://www.youtube-nocookie.com/embed/'+id+'?'+params;
   }
@@ -56,10 +57,51 @@
       image.src=mediaPoster(v);
     }
   }
+  function refreshPauseButton(s){
+    if(!s?.pauseButton)return;
+    const ready=s.playerReady && !s.playerFailed;
+    s.pauseButton.hidden=!!s.playerFailed;
+    s.pauseButton.disabled=!ready;
+    const paused=s.playbackState!==1;
+    s.pauseButton.textContent=paused?'▶':'Ⅱ';
+    s.pauseButton.setAttribute('aria-label',paused?'Play Short':'Pause Short');
+    s.pauseButton.title=paused?'Play':'Pause';
+    s.pauseButton.setAttribute('aria-pressed',String(!paused));
+  }
+  function togglePlayback(){
+    const s=active;
+    if(!s || !s.playerReady || s.playerFailed || !s.player)return;
+    try{
+      const state=typeof s.player.getPlayerState==='function'
+        ? s.player.getPlayerState():s.playbackState;
+      if(state===1){
+        s.player.pauseVideo();
+        s.playbackState=2;
+      }else{
+        s.player.playVideo();
+        s.playbackState=1;
+      }
+      refreshPauseButton(s);
+    }catch(_){
+      s.description.textContent='Playback is controlled by YouTube on this device.';
+    }
+  }
+  function activateNativeControls(s){
+    // Fail safely: retain usable official YouTube controls if its JS API cannot initialize.
+    if(active!==s || !s.frame)return;
+    s.playerFailed=true;
+    s.playerReady=false;
+    clearTimeout(s.apiWatchdog);
+    s.frame.src=youtubeEmbed(s.requestedId||s.initialId,true);
+    refreshPauseButton(s);
+    s.description.textContent='Native YouTube playback controls are available.';
+  }
+
   function disposePlayer(s){
     try{s.player?.destroy();}catch(_){}
     clearTimeout(s.apiWatchdog);
     s.player=null;s.frame=null;s.playerReady=false;s.playerPending=false;
+    s.playbackState=-1;
   }
   function attachApi(s){
     if(s.playerPending||s.playerReady)return;
@@ -67,10 +109,7 @@
     // Degrade to one normal iframe if the IFrame API is unavailable on this device.
     s.apiWatchdog=setTimeout(()=>{
       if(active!==s || s.playerReady || !s.frame)return;
-      s.playerFailed=true;
-      if(s.requestedId && s.requestedId!==s.initialId) {
-        s.frame.src=youtubeEmbed(s.requestedId);
-      }
+      activateNativeControls(s);
     },5000);
     loadYouTubeAPI().then(YT=>{
       if(active!==s||!s.frame?.isConnected)return;
@@ -81,12 +120,15 @@
               if(active!==s)return;
               s.player=event.target;s.playerReady=true;s.playerFailed=false;
               clearTimeout(s.apiWatchdog);
+              refreshPauseButton(s);
               if(s.requestedId!==s.initialId && typeof s.player.loadVideoById==='function'){
                 s.player.loadVideoById(s.requestedId);
               }
             },
             onStateChange:event=>{
               if(active!==s)return;
+              s.playbackState=event.data;
+              refreshPauseButton(s);
               if(event.data===YT.PlayerState.PLAYING){
                 s.holder?.classList.remove('shorts-buffering');
                 s.holder?.style.removeProperty('background-image');
@@ -96,15 +138,19 @@
               }
             },
             onAutoplayBlocked:()=>{
-              if(active===s)s.description.textContent='Tap the YouTube play control to start the Short.';
+              if(active===s){
+                s.playbackState=2;
+                refreshPauseButton(s);
+                s.description.textContent='Tap Play to start the Short.';
+              }
             },
             onError:()=>{
               if(active===s)s.description.textContent='This YouTube Short could not play.';
             }
           }
         });
-      }catch(_){s.playerFailed=true;}
-    }).catch(()=>{if(active===s)s.playerFailed=true;});
+      }catch(_){activateNativeControls(s);}
+    }).catch(()=>{if(active===s)activateNativeControls(s);});
   }
 
   const SEEN_KEY='kidlite.shorts.shown.v1';
@@ -163,6 +209,8 @@
       event.preventDefault(); navigate(1);
     } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
       event.preventDefault(); navigate(-1);
+    } else if(event.key===' ' || event.key==='k' || event.key==='K'){
+      event.preventDefault();togglePlayback();
     }
   }
   function makeRail(side) {
@@ -204,12 +252,12 @@
     }
     rail.addEventListener('click',()=>{
       if (movement.suppressClick) {movement.suppressClick=false;return;}
-      // Tap left edge for previous, right edge for next. No visible navigation buttons.
-      navigate(side === 'left' ? -1 : 1);
+      // Tap outside the YouTube iframe toggles playback; swiping changes video.
+      togglePlayback();
     });
     rail.addEventListener('keydown',event => {
       if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();navigate(side === 'left' ? -1 : 1);
+        event.preventDefault();togglePlayback();
       }
     });
     return rail;
@@ -221,6 +269,9 @@
     prepareNear(s);
     s.lastVideoSwitchAt=Date.now();
     s.requestedId=video.id;
+    s.playbackState=-1;
+    if(s.pauseButton)s.pauseButton.hidden=false;
+    refreshPauseButton(s);
     if(!s.holder || !s.frame?.isConnected){
       s.slot.replaceChildren(); // Initial creation only, NOT on each swipe.
       const holder=document.createElement('div');
@@ -243,10 +294,10 @@
       // Poster is the PLAYER BACKGROUND only; it does not cover the YouTube iframe/UI.
       s.holder.style.backgroundImage='url("'+mediaPoster(video)+'")';
       if(s.playerReady && typeof s.player?.loadVideoById==='function'){
-        try{s.player.loadVideoById(video.id);}catch(_){s.frame.src=youtubeEmbed(video.id);}
+        try{s.player.loadVideoById(video.id);}catch(_){activateNativeControls(s);}
       }else if(s.playerFailed){
         // When YouTube JS API is blocked, retain one iframe and update only its URL.
-        s.frame.src=youtubeEmbed(video.id);
+        s.frame.src=youtubeEmbed(video.id,true);
       }
       // During initial API bootstrap, onReady loads s.requestedId, not another iframe.
     }
@@ -257,6 +308,7 @@
   function showMessage(s, message, retry = false) {
     disposePlayer(s);
     s.holder=null;
+    if(s.pauseButton)s.pauseButton.hidden=true;
     s.slot.replaceChildren();
     const panel = document.createElement('div');
     panel.className = 'shorts-message';
@@ -341,6 +393,12 @@
     back.type='button';back.className='shorts-back';
     back.textContent='←';back.setAttribute('aria-label','Back to home');
     back.onclick=close;
+    const pauseButton=document.createElement('button');
+    pauseButton.type='button';pauseButton.className='shorts-pause-toggle';
+    pauseButton.setAttribute('aria-label','Pause Short');
+    pauseButton.setAttribute('aria-pressed','false');
+    pauseButton.textContent='Ⅱ';pauseButton.disabled=true;
+    pauseButton.onclick=togglePlayback;
     const stage=document.createElement('div');stage.className='shorts-stage';
     const slot=document.createElement('div');slot.className='shorts-video-slot';
     stage.append(makeRail('left'),slot,makeRail('right'));
@@ -357,6 +415,7 @@
       const dy=event.clientY-outerStart.y,dx=event.clientX-outerStart.x;
       outerStart=null;
       if(Math.abs(dy)>30 && Math.abs(dy)>Math.abs(dx))navigate(dy<0?1:-1);
+      else if(Math.abs(dy)<12 && Math.abs(dx)<12)togglePlayback();
     });
     slot.addEventListener('pointercancel',()=>{outerStart=null;});
     if(!('PointerEvent' in window)){
@@ -368,18 +427,20 @@
         if(from===null||!event.changedTouches.length)return;
         const delta=event.changedTouches[0].clientY-from;from=null;
         if(Math.abs(delta)>30)navigate(delta<0?1:-1);
+        else if(Math.abs(delta)<12)togglePlayback();
       },{passive:true});
     }
     const description=document.createElement('p');
     description.className='sr-only';description.setAttribute('aria-live','polite');
-    overlay.append(stage,back,description);
+    overlay.append(stage,back,pauseButton,description);
     const age=['all','2-5','6-9','10-12'].includes(options.age)?options.age:'all';
     const s={overlay,slot,description,age,controller:new AbortController(),
       items:[],ids:new Set(),index:0,page:0,hasMore:true,loading:null,pendingNext:false,
       lastSwitch:0,onExit:options.onExit,enteredFullscreen:false,
       player:null,frame:null,holder:null,playerReady:false,playerPending:false,
       playerFailed:false,requestedId:null,initialId:null,lastVideoSwitchAt:0,
-      playbackStartMs:0,preparedThumbnails:new Set(),virtualWindow:null,apiWatchdog:null};
+      playbackStartMs:0,preparedThumbnails:new Set(),virtualWindow:null,apiWatchdog:null,
+      pauseButton,playbackState:-1};
     active=s;
     let lastWheel=0;
     overlay.addEventListener('wheel',event=>{
