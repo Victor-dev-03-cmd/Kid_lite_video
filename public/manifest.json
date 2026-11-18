@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "KidLite — Safe Little Adventures",
+  "short_name": "KidLite",
+  "description": "A calm, parent-curated learning space with offline mini adventures.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F9FAFB",
+  "theme_color": "#F9FAFB",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

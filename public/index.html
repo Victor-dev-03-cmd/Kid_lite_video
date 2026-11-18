@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#F9FAFB" />
+  <meta name="description" content="A calm, low-data, parent-curated space for little learners." />
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>KidLite — Little space, big curiosity</title>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">✳</span><span>Kid<span class="brand-light">Lite</span></span></div>
+      <div class="top-status"><span class="chip chip-success"><span class="dot"></span> Offline ready</span><span class="chip chip-time" id="time-chip" title="Screen-time enforcement activates after secure setup">⏱ Parent setup needed</span><button type="button" class="install-trigger" id="install-btn">Install app</button></div>
+    </header>
+    <main class="container" id="main-view">
+      <section class="welcome">
+        <div class="eyebrow"><span class="sparkle">✦</span> A LITTLE SPACE FOR BIG CURIOSITY</div>
+        <h1>Happy learning,<br /><span class="gradient-word">little explorers.</span></h1>
+        <p>Calm, colorful, and made for curious minds. Your family's safer learning space starts here.</p>
+      </section>
+      <section class="categories" aria-label="Explore categories">
+        <button class="category rhymes" type="button" data-category="Rhymes"><span class="emoji" aria-hidden="true">🎵</span><span><strong>Rhymes</strong><small>Sing and smile</small></span><span class="arrow" aria-hidden="true">↗</span></button>
+        <button class="category stories" type="button" data-category="Stories"><span class="emoji" aria-hidden="true">📚</span><span><strong>Stories</strong><small>Dream a little</small></span><span class="arrow" aria-hidden="true">↗</span></button>
+        <button class="category science" type="button" data-category="Science"><span class="emoji" aria-hidden="true">🔬</span><span><strong>Science</strong><small>Wonder & discover</small></span><span class="arrow" aria-hidden="true">↗</span></button>
+        <button class="category shorts" type="button" data-category="Shorts"><span class="emoji" aria-hidden="true">✨</span><span><strong>Shorts</strong><small>Small happy moments</small></span><span class="arrow" aria-hidden="true">↗</span></button>
+      </section>
+      <section class="feature-card">
+        <div><div class="tag">PLAY ANYTIME · NO INTERNET</div><h2>Offline adventures<br />are waiting!</h2><p>Read a tiny story, match bright shapes, or relax with a gentle melody. No data needed.</p><button class="primary-button" type="button" id="open-offline">Explore offline play <span aria-hidden="true">→</span></button></div>
+        <div class="feature-illustration" aria-hidden="true"><div class="illustration-orbit">🌙</div><div class="illustration-center">🪁</div><div class="illustration-spark">✦</div></div>
+      </section>
+      <section class="section-heading"><h2>Made for little minds</h2><span>Gentle by design</span></section>
+      <div class="trust-row"><div><span>🛡️</span><strong>Parent-curated</strong><small>Only parent-approved channels, once setup is complete</small></div><div><span>🍃</span><strong>Lightweight</strong><small>Fast shell, offline games, no video downloads</small></div><div><span>💛</span><strong>No clutter</strong><small>Simple, distraction-light navigation</small></div></div>
+      <div class="notice"><strong>Development preview</strong><p>Video browsing, account sign-in, PIN lock, and screen-time enforcement are not active yet. Offline activities are available now.</p></div>
+    </main>
+    <section id="activity-view" class="container hidden" aria-live="polite"></section>
+    <nav class="dock" aria-label="Main navigation">
+      <button type="button" class="dock-button active" data-view="home"><span aria-hidden="true">⌂</span><small>Home</small></button>
+      <button type="button" class="dock-button" data-view="shorts"><span aria-hidden="true">▣</span><small>Shorts</small></button>
+      <button type="button" class="dock-button" data-view="offline"><span aria-hidden="true">◈</span><small>Offline Play</small></button>
+      <button type="button" class="dock-button" data-view="parent"><span aria-hidden="true">♧</span><small>Parent</small></button>
+    </nav>
+  </div>
+  <dialog id="install-dialog" class="install-dialog"><form method="dialog"><h2>Keep KidLite nearby</h2><p id="install-instructions">Add this app to your home screen to open your offline games anytime.</p><button class="primary-button" type="submit">Got it</button></form></dialog>
+  <script src="/offline-games.js" defer></script>
+  <script src="/app.js" defer></script>
+</body>
+</html>
