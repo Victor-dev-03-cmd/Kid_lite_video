@@ -315,3 +315,16 @@ html{overscroll-behavior-y:auto}
 .shorts-pause-toggle[hidden]{display:none!important}
 .shorts-pause-toggle:disabled{opacity:.5}
 .shorts-pause-toggle:focus-visible{outline:3px solid #b69cff;outline-offset:2px}
+
+
+/* Smart Feed Freshness: keep channel tabs prominent and refresh control reachable. */
+.channel-tabs-shell{width:100%;display:flex;align-items:flex-start;gap:7px;margin:1px 0 13px}
+.channel-tabs-shell .channel-tabs{flex:1;min-width:0;margin:0;scroll-padding-inline:8px;padding-bottom:8px}
+.feed-refresh-button{display:grid;place-items:center;flex:0 0 40px;width:40px;height:39px;margin:1px 0 0;border-radius:11px;border:1px solid #dedbe9;background:#f5f2fc;color:#7258b6;cursor:pointer}
+.feed-refresh-button svg{width:20px;height:20px;transition:transform .3s ease}
+.feed-refresh-button:focus-visible{outline:3px solid #9575db;outline-offset:2px}
+.feed-refresh-button:active{background:#ede5ff}
+.feed-refresh-button.refreshing svg{animation:kidlite-rotate 1s linear infinite}
+@keyframes kidlite-rotate{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.feed-refresh-button.refreshing svg{animation:none}}
+html:has(.home-view:not(.hidden)){overscroll-behavior-y:contain}

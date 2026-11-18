@@ -3,7 +3,8 @@
 (function () {
   'use strict';
   const approved = new Set(['chuchutamil','pattampoochi','infobellstamil',
-    'shemarootamil','chuttykannamma','kidstvtamil','cocomelon','kidschannel']);
+    'shemarootamil','chuttykannamma','kidstvtamil','cocomelon','kidschannel',
+    'bumblezoop','bachpankiduniya','bibotoys']);
   let active = null;
 
   let youtubeApiPromise=null;
@@ -337,6 +338,7 @@
         s.controller.abort();s.controller=new AbortController();
         s.items=[];s.ids=new Set();s.page=0;s.index=0;
         s.hasMore=true;s.loading=null;s.pendingNext=false;s.lastSwitch=0;
+        s.sessionSeed=window.KidLiteFreshness?.createSeed() || Date.now();
         showMessage(s,'Loading Shorts…');loadNext(s);
       };
     }
@@ -359,7 +361,13 @@
           const data=await response.json();
           if(active!==s)return;
           const seen=new Set(seenHistory());
-          for(const v of Array.isArray(data.videos)?data.videos:[]){
+          const batch=Array.isArray(data.videos)?data.videos:[];
+          // Each session shuffles the still-unseen approved Shorts, without changing
+          // the API URL or forcing new YouTube quota on each opening.
+          const randomBatch=window.KidLiteFreshness
+            ? window.KidLiteFreshness.shuffle(batch,(s.sessionSeed^((s.page+1)*2654435761))>>>0)
+            : batch;
+          for(const v of randomBatch){
             if(!valid(v)||seen.has(v.id)||s.ids.has(v.id))continue;
             s.ids.add(v.id);s.items.push(v);added++;
           }
@@ -440,7 +448,8 @@
       player:null,frame:null,holder:null,playerReady:false,playerPending:false,
       playerFailed:false,requestedId:null,initialId:null,lastVideoSwitchAt:0,
       playbackStartMs:0,preparedThumbnails:new Set(),virtualWindow:null,apiWatchdog:null,
-      pauseButton,playbackState:-1};
+      pauseButton,playbackState:-1,
+      sessionSeed:window.KidLiteFreshness?.createSeed() || Date.now()};
     active=s;
     let lastWheel=0;
     overlay.addEventListener('wheel',event=>{

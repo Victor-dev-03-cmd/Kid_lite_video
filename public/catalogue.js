@@ -7,7 +7,8 @@
   let syncPromise=null;
 
   const approved=new Set(['chuchutamil','pattampoochi','infobellstamil','shemarootamil',
-    'chuttykannamma','kidstvtamil','cocomelon','kidschannel']);
+    'chuttykannamma','kidstvtamil','cocomelon','kidschannel',
+    'bumblezoop','bachpankiduniya','bibotoys']);
   function normalize(raw,kind) {
     if (!raw || !/^[\w-]{11}$/.test(raw.id||'') || !approved.has(raw.channelKey)) return null;
     const title=String(raw.title||'').slice(0,180);

@@ -11,9 +11,14 @@ const CHANNELS: Record<string, Channel> = {
   infobellstamil: { id:'UCHcn4Ux-sO9nzNu7rDsoQLg', title:'Infobells Tamil', emoji:'🌸' },
   shemarootamil: { handle:'@shemarookidstamil', title:'Shemaroo Kids Tamil', emoji:'📚' },
   chuttykannamma: { id:'UC7ekJbGft4swD_3fb7MiRPw', title:'Chutty Kannamma', emoji:'🌈' },
-  kidstvtamil: { handle:'@kidstvtamil', title:'Kids TV Tamil', emoji:'🐥' }
+  kidstvtamil: { handle:'@kidstvtamil', title:'Kids TV Tamil', emoji:'🐥' },
+  // New featured channels. Bachpan Ki Duniya refers specifically to the Hindi rhymes channel.
+  bumblezoop: { handle:'@bumblezoop', title:'Bumble Zoop', emoji:'🚜' },
+  bachpankiduniya: { id:'UCsgUAZo732z8mXKZClgrHiA', title:'Bachpan Ki Duniya', emoji:'🎶' },
+  bibotoys: { id:'UCWda0RFPFeV2TO54PNxTMmA', title:'Bibo Toys', emoji:'🚗' }
 };
 const TAMIL_KEYS = ['chuchutamil','pattampoochi','infobellstamil','shemarootamil','chuttykannamma','kidstvtamil'];
+const FEATURED_KEYS = ['bumblezoop','bachpankiduniya','bibotoys'];
 const ALLOWED_AGES = ['all','2-5','6-9','10-12'];
 const STARTER: Video[] = [
   {id:'2iEpWefmdQI',title:'Best of Wheels on the Bus! CoComelon Nursery Rhymes',channelKey:'cocomelon',channel:'CoComelon - Nursery Rhymes',channelId:'UCbCmjCuTUZos6Inko4u57UQ',ageBands:['2-5'],source:'YouTube',kind:'video'},
@@ -108,28 +113,55 @@ export async function GET(request:Request) {
     (!q || v.title.toLocaleLowerCase().includes(q)||v.channel.toLocaleLowerCase().includes(q)));
   const seen=new Set<string>();
   videos=videos.filter(v=>!seen.has(v.id) && Boolean(seen.add(v.id)));
-  // User preference: freshly published Tamil uploads rank ahead of other channels.
-  // Cap each active channel's share so a single uploader cannot monopolize the page.
-  const newer=(a:Video,b:Video)=> (Date.parse(b.publishedAt || '') || 0)-(Date.parse(a.publishedAt || '') || 0);
-  const recentBalanced=(items:Video[],limit:number)=>{
-    const uniqueChannels=new Set(items.map(item=>item.channelKey)).size;
-    const perChannel=Math.max(1,Math.ceil(limit/Math.max(1,uniqueChannels)));
-    const counts=new Map<string,number>();
-    return items.sort(newer).filter(v=>{
-      const count=counts.get(v.channelKey)||0;
-      if(count>=perChannel) return false;
-      counts.set(v.channelKey,count+1);
-      return true;
-    }).slice(0,limit);
-  };
-  if(channel==='all') {
-    const tamil=videos.filter(v=>TAMIL_KEYS.includes(v.channelKey));
-    const other=videos.filter(v=>!TAMIL_KEYS.includes(v.channelKey));
-    videos=kind==='short'
-      ? [...recentBalanced(tamil,160),...recentBalanced(other,60)]
-      : [...recentBalanced(tamil,36),...recentBalanced(other,9)];
-  } else {
-    videos=recentBalanced(videos,kind==='short'?160:45);
+  // Server order is stable and cacheable. Session-specific freshness shuffle happens
+  // on the device so each reload doesn't invalidate Vercel/CDN API caches.
+  const newer=(a:Video,b:Video)=>
+    (Date.parse(b.publishedAt||'')||0)-(Date.parse(a.publishedAt||'')||0);
+  function recentBalanced(items:Video[], limit:number):Video[] {
+    const queues=new Map<string,Video[]>();
+    for(const item of [...items].sort(newer)){
+      if(!queues.has(item.channelKey))queues.set(item.channelKey,[]);
+      queues.get(item.channelKey)!.push(item);
+    }
+    const channels=[...queues.keys()];
+    const perChannel=Math.ceil(limit/Math.max(1,channels.length));
+    const result:Video[]=[];
+    for(let turn=0; result.length<limit && turn<perChannel;turn++){
+      let added=false;
+      for(const key of channels){
+        const next=queues.get(key)![turn];
+        if(next){result.push(next);added=true;}
+        if(result.length===limit)break;
+      }
+      if(!added)break;
+    }
+    return result;
+  }
+  function weaveGroups(groups:Video[][], weights:number[], limit:number):Video[] {
+    const offsets=groups.map(()=>0);
+    const result:Video[]=[];
+    while(result.length<limit){
+      let added=false;
+      for(let g=0;g<groups.length;g++){
+        let take=weights[g];
+        while(take-->0 && offsets[g]<groups[g].length && result.length<limit){
+          result.push(groups[g][offsets[g]++]);added=true;
+        }
+      }
+      if(!added)break;
+    }
+    return result;
+  }
+  if(channel==='all'){
+    const tamil=recentBalanced(videos.filter(v=>TAMIL_KEYS.includes(v.channelKey)),kind==='short'?120:90);
+    const featured=recentBalanced(videos.filter(v=>FEATURED_KEYS.includes(v.channelKey)),kind==='short'?60:60);
+    const established=recentBalanced(videos.filter(v=>
+      !TAMIL_KEYS.includes(v.channelKey)&&!FEATURED_KEYS.includes(v.channelKey)),20);
+    // Three Tamil then three newly requested featured videos, with legacy sources
+    // blended in at a lower frequency; every channel gets round-robin visibility.
+    videos=weaveGroups([tamil,featured,established],[3,3,1],kind==='short'?200:170);
+  }else{
+    videos=recentBalanced(videos,kind==='short'?160:50);
   }
   // Efficient metadata pagination: no client can pull unlimited records in one response.
   const total=videos.length;

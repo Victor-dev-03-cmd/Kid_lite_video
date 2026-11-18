@@ -143,3 +143,21 @@ Do not launch the child-directed product broadly until YouTube child-directed AP
 - The YouTube iframe is still fully interactive; it is **not** covered by a transparent gesture shield and does **not** use `pointer-events:none`. Touches beginning in the iframe cannot be intercepted cross-origin.
 - If the YouTube JavaScript API fails to initialize, the single iframe falls back to native player controls, preserving basic playback accessibility.
 - Service Worker shell cache bumped to v14.
+
+## Phase 1.16 — Smart Feed Freshness Engine + three new channels
+
+### Selected new channels
+- **Bumble Zoop** — fixed handle @bumblezoop (construction/toy vehicles).
+- **Bachpan Ki Duniya** — specifically the Hindi nursery rhymes channel @BachpanKiDuniya-b1j, ID UCsgUAZo732z8mXKZClgrHiA. Several unrelated channels use that name; parents can update this mapping after verifying the intended URL.
+- **Bibo Toys** — ID UCWda0RFPFeV2TO54PNxTMmA, handle @bibotoys.
+
+Their source IDs/handles are fixed server-side, never user-supplied to the YouTube API. These additions require parental content moderation; channel membership is not proof that every upload suits ages 2–12.
+
+### Feed and quota
+- The existing server already reads **up to 50 upload entries per channel** using `playlistItems.list` (1 quota unit per call), with additional `channels.list` and `videos.list` calls. Channel metadata caches stay 30 minutes; API responses keep CDN cache TTLs. The free-tier daily quota is limited.
+- Server forms a **deep, round-robin and newest-first stable pool** and surfaces up to ~170 long videos for the All feed / ~200 Shorts across 20-item pages when the channels provide enough eligible content. Every selected source has a chance to appear. The first slots interleave Tamil and the three featured newcomers.
+- Home now defaults to **All**, preserving a dedicated Tamil filter and new single-channel filters.
+- A lightweight standalone `freshness.js` implements per-session Fisher–Yates shuffle on the CLIENT, unseen-first with a bounded 500-ID `localStorage` history. IDs are only marked watched when a child opens a normal video. Shorts already retain their separate 600-ID shown history; Shorts now shuffle fetched unseen items per session.
+- The refresh icon and top-of-feed passive pull gesture generate a new local seed and bypass the 3-minute client cache. **No random seed is sent to the YouTube Data API** because that would defeat CDN caching, inflate quota usage and provide no genuinely new source videos.
+- Reordering a finite pool is NOT identical to discovering newly uploaded videos. Truly new titles arrive when the approved channel uploads and the server/CDN freshness window expires. The application never invents video IDs.
+- `freshness.js` is precached in Service Worker shell v15; no YouTube media content is precached.

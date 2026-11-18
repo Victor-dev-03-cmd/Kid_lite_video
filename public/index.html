@@ -57,10 +57,14 @@
   </section>
 
   <main id="main-view" class="home-view hidden">
+    <div class="channel-tabs-shell">
     <div class="channel-tabs" role="group" aria-label="Channels">
-      <button class="channel-chip selected" type="button" data-channel="tamil" aria-pressed="true">தமிழ் · Tamil</button>
+      <button class="channel-chip" type="button" data-channel="tamil" aria-pressed="false">தமிழ் · Tamil</button>
+      <button class="channel-chip" type="button" data-channel="bumblezoop" aria-pressed="false">🚜 Bumble Zoop</button>
+      <button class="channel-chip" type="button" data-channel="bachpankiduniya" aria-pressed="false">🎶 Bachpan Ki Duniya</button>
+      <button class="channel-chip" type="button" data-channel="bibotoys" aria-pressed="false">🚗 Bibo Toys</button>
+      <button class="channel-chip selected" type="button" data-channel="all" aria-pressed="true">All</button>
       <button class="channel-chip" type="button" data-channel="originals" aria-pressed="false">Originals</button>
-      <button class="channel-chip" type="button" data-channel="all" aria-pressed="false">All</button>
       <button class="channel-chip" type="button" data-channel="chuchutamil" aria-pressed="false">🎵 ChuChu TV Tamil</button>
       <button class="channel-chip" type="button" data-channel="pattampoochi" aria-pressed="false">🦋 Pattampoochi</button>
       <button class="channel-chip" type="button" data-channel="infobellstamil" aria-pressed="false">🌸 Infobells Tamil</button>
@@ -69,6 +73,8 @@
       <button class="channel-chip" type="button" data-channel="kidstvtamil" aria-pressed="false">🐥 Kids TV Tamil</button>
       <button class="channel-chip" type="button" data-channel="cocomelon" aria-pressed="false">🍉 CoComelon</button>
       <button class="channel-chip" type="button" data-channel="kidschannel" aria-pressed="false">🚂 Kids Channel</button>
+    </div>
+    <button class="feed-refresh-button" type="button" id="feed-refresh" aria-label="Refresh videos" title="Refresh videos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 9a8 8 0 0 1 14-2l1 5M4 12l1 5a8 8 0 0 0 14-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
     </div>
     <section id="video-feed" class="video-feed" aria-label="Approved YouTube videos" aria-live="polite"></section>
     <div id="feed-status" class="feed-status" role="status"></div>
@@ -93,6 +99,7 @@
   </div>
 </dialog>
 <script defer src="/offline-games.js"></script>
+<script defer src="/freshness.js"></script>
 <script defer src="/catalogue.js"></script>
 <script defer src="/shorts.js"></script>
 <script defer src="/install.js"></script>

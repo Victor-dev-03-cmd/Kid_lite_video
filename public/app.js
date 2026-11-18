@@ -10,11 +10,18 @@
   const channelButtons = [...document.querySelectorAll('[data-channel]')];
   const navButtons = [...document.querySelectorAll('.dock-button')];
   const state = {
-    channel:'tamil',requestNumber:0,videos:[],timer:null,hasLoaded:false,
+    channel:'all',requestNumber:0,videos:[],timer:null,hasLoaded:false,
     feedCursor:0,feedObserver:null,sentinel:null,fetchController:null,
     feedCache:new Map(), returnScrollY:0
   };
   const FEED_CHUNK = 7;
+  const freshness = window.KidLiteFreshness;
+  const refreshButton = document.getElementById('feed-refresh');
+  state.feedSeed = freshness?.createSeed() || Date.now();
+  state.lastRefreshAt = 0;
+  function shuffledVideos(videos) {
+    return freshness ? freshness.order(videos,{seed:state.feedSeed,channel:state.channel}) : videos;
+  }
   let activeVideoSession = null;
 
   function signedIn() { return Boolean(window.KidLiteAuth?.signedIn); }
@@ -105,7 +112,7 @@
     const details = document.createElement('div'); details.className = 'video-info';
     const avatar = document.createElement('span');
     avatar.className = 'channel-avatar ' + video.channelKey;
-    avatar.textContent = ({cocomelon:'🍉',kidschannel:'🚂',chuchutamil:'🎵',pattampoochi:'🦋',infobellstamil:'🌸',shemarootamil:'📚',chuttykannamma:'🌈',kidstvtamil:'🐥'})[video.channelKey] || '🎬';
+    avatar.textContent = ({cocomelon:'🍉',kidschannel:'🚂',chuchutamil:'🎵',pattampoochi:'🦋',infobellstamil:'🌸',shemarootamil:'📚',chuttykannamma:'🌈',kidstvtamil:'🐥',bumblezoop:'🚜',bachpankiduniya:'🎶',bibotoys:'🚗'})[video.channelKey] || '🎬';
     avatar.setAttribute('aria-hidden', 'true');
     const text = document.createElement('div'); text.className = 'video-info-text';
     const title = document.createElement('button'); title.className = 'video-title'; title.type = 'button';
@@ -120,7 +127,7 @@
   }
   function validVideo(v) {
     return v && typeof v.id === 'string' && /^[\w-]{11}$/.test(v.id) &&
-      ['cocomelon','kidschannel','chuchutamil','pattampoochi','infobellstamil','shemarootamil','chuttykannamma','kidstvtamil'].includes(v.channelKey) &&
+      ['cocomelon','kidschannel','chuchutamil','pattampoochi','infobellstamil','shemarootamil','chuttykannamma','kidstvtamil','bumblezoop','bachpankiduniya','bibotoys'].includes(v.channelKey) &&
       typeof v.title === 'string' && typeof v.channel === 'string';
   }
   function disconnectFeedObserver() {
@@ -174,7 +181,7 @@
     appendFeedChunk();
   }
 
-  async function loadVideos() {
+  async function loadVideos(options={}) {
     const requestNumber = ++state.requestNumber;
     state.fetchController?.abort();
     state.fetchController = new AbortController();
@@ -188,8 +195,8 @@
       return;
     }
     const old = state.feedCache.get(cacheKey);
-    if (old && Date.now() < old.until) {
-      displayVideos(old.videos,old.notice);
+    if (!options.force && old && Date.now() < old.until) {
+      displayVideos(shuffledVideos(old.videos),old.notice);
       return;
     }
     feedStatus.textContent = 'Loading videos…';
@@ -208,7 +215,7 @@
         : (payload.notice || 'No videos match these filters.');
       if (state.feedCache.size >= 10) state.feedCache.delete(state.feedCache.keys().next().value);
       state.feedCache.set(cacheKey,{videos,notice,until:Date.now()+3*60*1000});
-      displayVideos(videos,notice);
+      displayVideos(shuffledVideos(videos),notice);
     } catch (error) {
       if (requestNumber !== state.requestNumber || error?.name === 'AbortError') return;
       // Show text-only cached titles without presenting them as playable offline videos.
@@ -237,6 +244,35 @@
       feedStatus.append(document.createTextNode(' '),retry);
     }
   }
+  function refreshFeed() {
+    if (!signedIn() || home.classList.contains('hidden')) return;
+    const now=Date.now();
+    if (now-state.lastRefreshAt<800) return;
+    state.lastRefreshAt=now;
+    // New shuffle seed is local, not an API query parameter, preserving CDN/quota.
+    state.feedSeed=freshness?.createSeed() || now;
+    if(refreshButton)refreshButton.classList.add('refreshing');
+    window.scrollTo({top:0,behavior:'instant'});
+    loadVideos({force:true}).finally(()=>{
+      refreshButton?.classList.remove('refreshing');
+    });
+  }
+  if(refreshButton)refreshButton.onclick=refreshFeed;
+  // Native pull gestures are observed passively; no interception of scrolling.
+  let feedPullStart=null;
+  home.addEventListener('touchstart',event=>{
+    if(home.classList.contains('hidden')||window.scrollY>5||event.touches.length!==1)return;
+    feedPullStart={x:event.touches[0].clientX,y:event.touches[0].clientY};
+  },{passive:true});
+  home.addEventListener('touchend',event=>{
+    if(!feedPullStart||!event.changedTouches.length)return;
+    const dy=event.changedTouches[0].clientY-feedPullStart.y;
+    const dx=event.changedTouches[0].clientX-feedPullStart.x;
+    feedPullStart=null;
+    if(dy>95 && Math.abs(dy)>Math.abs(dx)*1.35 && window.scrollY<12) refreshFeed();
+  },{passive:true});
+  home.addEventListener('touchcancel',()=>{feedPullStart=null;},{passive:true});
+
   channelButtons.forEach(button => button.onclick = () => {
     state.channel = button.dataset.channel;
     channelButtons.forEach(other => {
@@ -254,6 +290,7 @@
   function showVideo(video) {
     // Only suggest videos from the server's approved-channel feed.
     if (!validVideo(video) || !state.videos.some(item => item.id === video.id)) return;
+    freshness?.markWatched(video.id);
     const suggestions = state.videos
       .filter(item => validVideo(item) && item.id !== video.id)
       .sort((a,b) => Number(b.channelKey===video.channelKey)-Number(a.channelKey===video.channelKey))
@@ -649,7 +686,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v14');
+      const cache=await caches.open('kidlite-offline-v15');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

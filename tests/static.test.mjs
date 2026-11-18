@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v14/);
+  assert.match(file('public/app.js'), /kidlite-offline-v15/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -99,8 +99,9 @@ test('Tamil feed prioritized and recent uploads sorted server-side', () => {
   assert.match(api, /publishedAt/);
   assert.match(api, /recentBalanced/);
   assert.match(api, /channel==='tamil'/);
-  assert.match(html, /data-channel="tamil" aria-pressed="true"/);
-  assert.match(file('public/app.js'), /channel:'tamil'/);
+  assert.match(html, /data-channel="tamil" aria-pressed="false"/);
+  assert.match(html, /data-channel="all" aria-pressed="true"/);
+  assert.match(file('public/app.js'), /channel:'all'/);
 });
 test('Shorts tab directly opens one immersive player instead of a list', () => {
   const js = file('public/shorts.js');
@@ -183,7 +184,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v14/);
+  assert.match(worker,/kidlite-offline-v15/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -215,7 +216,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v14/);
+  assert.match(app,/kidlite-offline-v15/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -324,4 +325,59 @@ test('Shorts keeps swipe for navigation and tap on the app border for pause',()=
   assert.match(js,/togglePlayback\(\);/);
   assert.match(js,/refreshPauseButton\(s\)/);
   assert.match(js,/event\.key===' ' \|\| event\.key==='k'/);
+});
+
+test('Three verified selected kids-channel identities appear in server and channel chips',()=>{
+  const html=file('public/index.html'),api=file('api/videos.ts'),app=file('public/app.js');
+  const shorts=file('public/shorts.js'),catalog=file('public/catalogue.js');
+  for(const key of ['bumblezoop','bachpankiduniya','bibotoys']){
+    assert.match(html,new RegExp('data-channel="'+key+'"'));
+    assert.ok(api.includes(key));
+    assert.ok(app.includes(key));
+    assert.ok(shorts.includes(key));
+    assert.ok(catalog.includes(key));
+  }
+  assert.match(api,/UCsgUAZo732z8mXKZClgrHiA/);
+  assert.match(api,/UCWda0RFPFeV2TO54PNxTMmA/);
+  assert.match(api,/@bumblezoop/);
+  assert.match(api,/FEATURED_KEYS/);
+  assert.match(html,/data-channel="all" aria-pressed="true"/);
+});
+test('Uploads playlist searches 50 per selected channel and serves a deep balanced feed',()=>{
+  const api=file('api/videos.ts');
+  assert.match(api,/playlistItems/);
+  assert.match(api,/maxResults:'50'/);
+  assert.match(api,/cache\.set\(channelKey,\{until:Date\.now\(\)\+30\*60\*1000,videos\}\)/);
+  assert.match(api,/recentBalanced/);
+  assert.match(api,/weaveGroups/);
+  assert.match(api,/kind==='short'\?200:170/);
+  assert.match(api,/perPage=20/);
+  assert.match(api,/s-maxage=180/);
+});
+test('Browser seed and watched-video history shuffle unseen videos first',()=>{
+  const js=file('public/freshness.js'),app=file('public/app.js');
+  assert.match(js,/function shuffle\(items,seed=1\)/);
+  assert.match(js,/Math\.floor\(rng\(\)\*\(i\+1\)\)/);
+  assert.match(js,/function readSeen\(\)/);
+  assert.match(js,/function markWatched\(videoId\)/);
+  assert.match(js,/const seen=new Set\(readSeen\(\)\)/);
+  assert.match(js,/return \[\.\.\.spread\(ranked\[0\]/);
+  assert.match(app,/freshness\.order\(videos/);
+  assert.match(app,/freshness\?\.markWatched\(video\.id\)/);
+  assert.match(app,/state\.feedSeed=freshness\?\.createSeed\(\)/);
+});
+test('Refresh uses fresh local seed without duplicating YouTube provider calls',()=>{
+  const html=file('public/index.html'),app=file('public/app.js'),shorts=file('public/shorts.js');
+  assert.match(html,/id="feed-refresh"/);
+  assert.match(html,/src="\/freshness\.js"/);
+  assert.match(app,/function refreshFeed\(\)/);
+  assert.match(app,/loadVideos\(\{force:true\}\)/);
+  assert.match(app,/home\.addEventListener\('touchstart'/);
+  assert.match(app,/home\.addEventListener\('touchend'/);
+  assert.match(app,/if \(!options\.force && old/);
+  assert.match(shorts,/KidLiteFreshness\.shuffle\(batch/);
+  assert.match(shorts,/sessionSeed:/);
+  const sw=file('public/sw.js');
+  assert.match(sw,/\/freshness\.js/);
+  assert.match(sw,/kidlite-offline-v15/);
 });
