@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v15/);
+  assert.match(file('public/app.js'), /kidlite-offline-v16/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -138,11 +138,11 @@ test('Home begins with channels; heading, age selector and source banner are rem
 });
 test('Normal video player lists at most four other allowlisted suggestions', () => {
   const app = file('public/app.js');
-  assert.match(app, /const suggestions = state\.videos/);
+  assert.match(app, /const candidates = selected => state\.videos/);
   assert.match(app, /\.slice\(0, 4\)/);
-  assert.match(app, /item\.id !== video\.id/);
+  assert.match(app, /item\.id !== selected\.id/);
   assert.match(app, /validVideo\(item\)/);
-  assert.match(app, /button\.onclick = \(\) => showVideo\(suggested\)/);
+  assert.match(app, /button\.onclick = \(\) => changeVideo\(suggested\)/);
 });
 
 test('Originals has an explicit truthful empty state', () => {
@@ -184,7 +184,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v15/);
+  assert.match(worker,/kidlite-offline-v16/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -216,7 +216,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v15/);
+  assert.match(app,/kidlite-offline-v16/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -285,7 +285,7 @@ test('Now Playing has a compliant external Expand button and conditional landsca
   assert.match(app,/fullscreenchange/);
   assert.match(app,/activeVideoSession = \{dispose\}/);
   assert.match(app,/typeof window\.screen\.orientation\?\.lock === 'function'/);
-  assert.match(app,/Rotate phone for landscape/);
+  assert.match(app,/Rotate your phone if landscape is unavailable/);
   assert.match(app,/window\.screen\.orientation\?\.unlock/);
   assert.match(css,/\.player-shell:fullscreen/);
   assert.match(css,/\.player-fullscreen-toolbar/);
@@ -308,22 +308,22 @@ test('Shorts exposes only the requested pause control without masking the YouTub
   assert.match(js,/controls:nativeControls\?'1':'0'/);
   assert.match(js,/fs:nativeControls\?'1':'0'/);
   assert.match(js,/cc_load_policy:'0'/);
-  assert.match(js,/className='shorts-pause-toggle'/);
+  assert.doesNotMatch(js,/className='shorts-pause-toggle'/);
   assert.match(js,/function togglePlayback\(\)/);
   assert.match(js,/s\.player\.pauseVideo\(\)/);
   assert.match(js,/s\.player\.playVideo\(\)/);
-  assert.match(js,/aria-label','Pause Short'/);
+  assert.doesNotMatch(js,/pauseButton\.onclick=togglePlayback/);
   assert.match(js,/function activateNativeControls\(s\)/);
   assert.match(js,/youtubeEmbed\(s\.requestedId\|\|s\.initialId,true\)/);
   assert.match(css,/\.shorts-pause-toggle\{/);
   assert.doesNotMatch(css,/\.shorts-player iframe\s*\{[^}]*pointer-events\s*:\s*none/);
   assert.doesNotMatch(js,/touch-shield|gesture-overlay/);
 });
-test('Shorts keeps swipe for navigation and tap on the app border for pause',()=>{
+test('Shorts swipe remains the primary touch gesture without accidental pause taps',()=>{
   const js=file('public/shorts.js');
   assert.match(js,/navigate\(dy < 0 \? 1 : -1\)/);
-  assert.match(js,/togglePlayback\(\);/);
-  assert.match(js,/refreshPauseButton\(s\)/);
+  assert.match(js,/shorts-swipe-rail/);
+  assert.doesNotMatch(js,/overlay\.append\(stage,back,pauseButton,description\)/);
   assert.match(js,/event\.key===' ' \|\| event\.key==='k'/);
 });
 
@@ -379,5 +379,34 @@ test('Refresh uses fresh local seed without duplicating YouTube provider calls',
   assert.match(shorts,/sessionSeed:/);
   const sw=file('public/sw.js');
   assert.match(sw,/\/freshness\.js/);
-  assert.match(sw,/kidlite-offline-v15/);
+  assert.match(sw,/kidlite-offline-v16/);
+});
+
+test('Expanded long videos fill the viewport and keep four in-app suggestions',()=>{
+  const app=file('public/app.js'),css=file('public/styles.css');
+  assert.match(css,/\.player-shell:fullscreen/);
+  assert.match(css,/width:100vw!important/);
+  assert.match(css,/height:100dvh!important/);
+  assert.match(css,/flex:1 1 0%!important/);
+  assert.match(css,/aspect-ratio:auto!important/);
+  assert.match(css,/\.player-fullscreen-recommendation-list/);
+  assert.match(css,/\.player-fullscreen-recommendations\[hidden\]/);
+  assert.match(app,/className = 'player-fullscreen-next-toggle'/);
+  assert.match(app,/className = 'player-fullscreen-recommendations'/);
+  assert.match(app,/compact \? 'player-fullscreen-suggestion'/);
+  assert.match(app,/button\.onclick = \(\) => changeVideo\(suggested\)/);
+  assert.match(app,/frame\.src = videoUrl\(current\)/);
+  assert.match(app,/window\.screen\.orientation\.lock\('landscape'\)/);
+  assert.match(app,/\.slice\(0, 4\)/);
+});
+test('Shorts player fills device height without cropping YouTube or covering its controls',()=>{
+  const css=file('public/styles.css'),js=file('public/shorts.js');
+  assert.match(css,/\.shorts-video-slot \.shorts-player\{/);
+  assert.match(css,/width:100%!important/);
+  assert.match(css,/height:100%!important/);
+  assert.match(css,/aspect-ratio:auto!important/);
+  assert.doesNotMatch(js,/className='shorts-pause-toggle'/);
+  assert.doesNotMatch(js,/touch-shield|gesture-overlay/);
+  assert.match(js,/onAutoplayBlocked/);
+  assert.match(js,/activateNativeControls\(s\)/);
 });

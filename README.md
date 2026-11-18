@@ -161,3 +161,12 @@ Their source IDs/handles are fixed server-side, never user-supplied to the YouTu
 - The refresh icon and top-of-feed passive pull gesture generate a new local seed and bypass the 3-minute client cache. **No random seed is sent to the YouTube Data API** because that would defeat CDN caching, inflate quota usage and provide no genuinely new source videos.
 - Reordering a finite pool is NOT identical to discovering newly uploaded videos. Truly new titles arrive when the approved channel uploads and the server/CDN freshness window expires. The application never invents video IDs.
 - `freshness.js` is precached in Service Worker shell v15; no YouTube media content is precached.
+
+## Phase 1.17 — True viewport-sized players and fullscreen approved suggestions
+
+- **Long-video Expand:** Replaced the former 16:9/centered-box CSS constraints with a viewport-sized, flexible iframe container. Landscape fullscreen retains auto orientation-lock where supported and a compact 42px toolbar. The actual picture remains aspect-fit within the official YouTube player (no video crop, stretch or fake resolution increase).
+- Fullscreen toolbar includes an **Up next (up to 4)** control. Suggestions open in a separate, browser-native horizontal shelf beneath the player, never on top of or obscuring the official YouTube iframe. The player is largest when the shelf is closed.
+- Clicking one of the 4 approved suggestions **while in fullscreen** changes the current iframe video and regenerates suggestions without exiting fullscreen or resetting orientation. In-app normal-player suggestions also use the same allowlisted switch logic.
+- **Shorts:** Removed previous 9:16 artificial box-size limits; the official privacy-enhanced YouTube iframe now fills the full available portrait viewport between narrow gesture margins. The YouTube video inside may still letterbox depending on source aspect ratio, which cannot lawfully be cropped or stretched.
+- Shorts is now swipe-centric: removed the extra app Play/Pause widget and tap-to-pause border actions. In case autoplay fails, revert to official YouTube controls rather than leaving the child with an unplayable video. Swipe start on the cross-origin YouTube player is **not intercepted**; blocking it with a transparent touch shield would interfere with YouTube player functionality.
+- Offline shell service-worker cache version v16. Build and mobile-browser responsiveness must be verified for true device-specific fullscreen orientation.

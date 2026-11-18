@@ -139,11 +139,7 @@
               }
             },
             onAutoplayBlocked:()=>{
-              if(active===s){
-                s.playbackState=2;
-                refreshPauseButton(s);
-                s.description.textContent='Tap Play to start the Short.';
-              }
+              if(active===s && !s.playerFailed)activateNativeControls(s);
             },
             onError:()=>{
               if(active===s)s.description.textContent='This YouTube Short could not play.';
@@ -217,8 +213,7 @@
   function makeRail(side) {
     const rail = document.createElement('div');
     rail.className = 'shorts-swipe-rail shorts-rail-' + side;
-    rail.setAttribute('role','button');
-    rail.tabIndex = 0;
+    rail.setAttribute('role','region');
     rail.setAttribute('aria-label','Swipe vertically for previous or next Short');
     const movement = {pointer:null,startY:0,startX:0,suppressClick:false};
     rail.addEventListener('pointerdown',event => {
@@ -251,16 +246,7 @@
         if (Math.abs(delta) > 28) {movement.suppressClick=true; navigate(delta < 0 ? 1 : -1);}
       },{passive:true});
     }
-    rail.addEventListener('click',()=>{
-      if (movement.suppressClick) {movement.suppressClick=false;return;}
-      // Tap outside the YouTube iframe toggles playback; swiping changes video.
-      togglePlayback();
-    });
-    rail.addEventListener('keydown',event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();togglePlayback();
-      }
-    });
+    // Rail is gesture-only, with no extra buttons or tap actions.
     return rail;
   }
   function render(){
@@ -401,12 +387,7 @@
     back.type='button';back.className='shorts-back';
     back.textContent='←';back.setAttribute('aria-label','Back to home');
     back.onclick=close;
-    const pauseButton=document.createElement('button');
-    pauseButton.type='button';pauseButton.className='shorts-pause-toggle';
-    pauseButton.setAttribute('aria-label','Pause Short');
-    pauseButton.setAttribute('aria-pressed','false');
-    pauseButton.textContent='Ⅱ';pauseButton.disabled=true;
-    pauseButton.onclick=togglePlayback;
+    // Kid-only viewing mode: no extra Play/Pause button obscures the portrait video.
     const stage=document.createElement('div');stage.className='shorts-stage';
     const slot=document.createElement('div');slot.className='shorts-video-slot';
     stage.append(makeRail('left'),slot,makeRail('right'));
@@ -423,7 +404,7 @@
       const dy=event.clientY-outerStart.y,dx=event.clientX-outerStart.x;
       outerStart=null;
       if(Math.abs(dy)>30 && Math.abs(dy)>Math.abs(dx))navigate(dy<0?1:-1);
-      else if(Math.abs(dy)<12 && Math.abs(dx)<12)togglePlayback();
+      // Touching the app border without swiping does not alter playback.
     });
     slot.addEventListener('pointercancel',()=>{outerStart=null;});
     if(!('PointerEvent' in window)){
@@ -435,12 +416,12 @@
         if(from===null||!event.changedTouches.length)return;
         const delta=event.changedTouches[0].clientY-from;from=null;
         if(Math.abs(delta)>30)navigate(delta<0?1:-1);
-        else if(Math.abs(delta)<12)togglePlayback();
+        // Only vertical swipes navigate Shorts.
       },{passive:true});
     }
     const description=document.createElement('p');
     description.className='sr-only';description.setAttribute('aria-live','polite');
-    overlay.append(stage,back,pauseButton,description);
+    overlay.append(stage,back,description);
     const age=['all','2-5','6-9','10-12'].includes(options.age)?options.age:'all';
     const s={overlay,slot,description,age,controller:new AbortController(),
       items:[],ids:new Set(),index:0,page:0,hasMore:true,loading:null,pendingNext:false,
@@ -448,7 +429,7 @@
       player:null,frame:null,holder:null,playerReady:false,playerPending:false,
       playerFailed:false,requestedId:null,initialId:null,lastVideoSwitchAt:0,
       playbackStartMs:0,preparedThumbnails:new Set(),virtualWindow:null,apiWatchdog:null,
-      pauseButton,playbackState:-1,
+      pauseButton:null,playbackState:-1,
       sessionSeed:window.KidLiteFreshness?.createSeed() || Date.now()};
     active=s;
     let lastWheel=0;

@@ -328,3 +328,151 @@ html{overscroll-behavior-y:auto}
 @keyframes kidlite-rotate{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.feed-refresh-button.refreshing svg{animation:none}}
 html:has(.home-view:not(.hidden)){overscroll-behavior-y:contain}
+
+
+/* Phase 1.17: use the FULL expanded viewport, not a centred 16:9 thumbnail.
+   YouTube itself handles letterboxing within the official player; no cropping. */
+.player-shell:fullscreen,
+.player-shell:-webkit-full-screen{
+  box-sizing:border-box!important;
+  width:100vw!important;
+  height:100vh!important;
+  height:100dvh!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  padding:0!important;
+  margin:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  gap:0!important;
+  overflow:hidden!important;
+  background:#050507!important;
+}
+.player-shell:fullscreen .player-fullscreen-toolbar,
+.player-shell:-webkit-full-screen .player-fullscreen-toolbar{
+  display:flex!important;
+  box-sizing:border-box;
+  flex:0 0 auto!important;
+  height:42px;
+  min-height:42px;
+  padding:2px max(9px,env(safe-area-inset-right,0px)) 2px max(9px,env(safe-area-inset-left,0px));
+  background:#0a0a0d;
+  width:100%;
+  color:#fff;
+}
+.player-fullscreen-label{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-fullscreen-next-toggle{display:none;border:1px solid #ffffff45;border-radius:9px;color:#fff;background:#ffffff15;min-height:34px;padding:4px 11px;font-size:12px;font-weight:750;white-space:nowrap}
+.player-fullscreen-next-toggle:disabled{opacity:.3}
+.player-shell:fullscreen .player-fullscreen-next-toggle,
+.player-shell:-webkit-full-screen .player-fullscreen-next-toggle{display:inline-flex;align-items:center;justify-content:center}
+.player-shell:fullscreen .video-player,
+.player-shell:-webkit-full-screen .video-player{
+  box-sizing:border-box!important;
+  position:relative!important;
+  display:block!important;
+  flex:1 1 0%!important;
+  min-height:0!important;
+  min-width:0!important;
+  max-height:none!important;
+  max-width:none!important;
+  width:100%!important;
+  height:0!important;
+  aspect-ratio:auto!important;
+  padding:0!important;
+  margin:0!important;
+  border-radius:0!important;
+  background:#000!important;
+  overflow:hidden;
+}
+.player-shell:fullscreen .video-player iframe,
+.player-shell:-webkit-full-screen .video-player iframe{
+  position:absolute;
+  inset:0;
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  border:0;
+}
+/* Fullscreen videos keep four KidLite-approved suggestions available on demand,
+   outside the iframe. They never cover YouTube playback controls or ads. */
+.player-fullscreen-recommendations[hidden]{display:none!important}
+.player-fullscreen-recommendations{display:none}
+.player-shell:fullscreen .player-fullscreen-recommendations:not([hidden]),
+.player-shell:-webkit-full-screen .player-fullscreen-recommendations:not([hidden]){
+  flex:0 0 auto;
+  box-sizing:border-box;
+  width:100%;
+  height:104px;
+  padding:7px max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px));
+  display:flex;
+  align-items:stretch;
+  background:#111116;
+  border-top:1px solid #ffffff1c;
+}
+.player-fullscreen-recommendation-list{
+  display:flex;gap:9px;align-items:stretch;overflow-x:auto;
+  overscroll-behavior-x:contain;scrollbar-width:none;width:100%;height:100%;
+}
+.player-fullscreen-recommendation-list::-webkit-scrollbar{display:none}
+.player-fullscreen-suggestion{
+  flex:0 0 150px;
+  display:flex;flex-direction:column;align-items:stretch;gap:3px;
+  border:0;border-radius:8px;padding:0;background:transparent;
+  color:#eee;text-align:left;
+}
+.player-fullscreen-suggestion img{
+  display:block;height:50px;width:90px;aspect-ratio:16/9;
+  object-fit:cover;border-radius:5px;flex:none;
+}
+.player-fullscreen-suggestion .suggestion-details{display:flex;flex-direction:column;min-width:0}
+.player-fullscreen-suggestion strong{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden;
+  color:#f2f2f6;font-size:10px;font-weight:720;line-height:1.25;
+}
+.player-fullscreen-suggestion small{display:none}
+@media(max-height:380px) and (orientation:landscape){
+  .player-shell:fullscreen .player-fullscreen-toolbar{height:36px;min-height:36px}
+  .player-shell:fullscreen .player-fullscreen-recommendations:not([hidden]){height:86px;padding-top:4px}
+  .player-fullscreen-suggestion{flex-basis:125px}
+  .player-fullscreen-suggestion img{height:43px;width:78px}
+}
+/* Shorts iframe itself is the largest possible uncropped player viewport.
+   Preserve slim app-owned swipe strips; no shield over the YouTube player. */
+.shorts-overlay{width:100vw!important;height:100vh!important;height:100dvh!important}
+.shorts-stage{inset:0!important;width:100%!important;height:100%!important;padding:0!important}
+.shorts-video-slot{flex:1 1 0%!important;width:auto!important;height:100%!important;min-width:0!important;min-height:0!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important}
+.shorts-video-slot .shorts-player{
+  box-sizing:border-box!important;
+  display:block!important;
+  position:relative!important;
+  flex:1 1 auto!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  aspect-ratio:auto!important;
+  border-radius:0!important;
+  margin:0!important;
+  background:#000;
+}
+.shorts-video-slot .shorts-player iframe{
+  position:absolute!important;
+  inset:0!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  border:0!important;
+}
+@media(max-width:420px){
+  .shorts-stage{padding:0!important;gap:0!important}
+  .shorts-video-slot .shorts-player{height:100%!important;width:100%!important;max-width:none!important}
+}
