@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v18/);
+  assert.match(file('public/app.js'), /kidlite-offline-v19/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -184,7 +184,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v18/);
+  assert.match(worker,/kidlite-offline-v19/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -216,7 +216,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v18/);
+  assert.match(app,/kidlite-offline-v19/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -379,7 +379,7 @@ test('Refresh uses fresh local seed without duplicating YouTube provider calls',
   assert.match(shorts,/sessionSeed:/);
   const sw=file('public/sw.js');
   assert.match(sw,/\/freshness\.js/);
-  assert.match(sw,/kidlite-offline-v18/);
+  assert.match(sw,/kidlite-offline-v19/);
 });
 
 test('Expanded videos show a permanent swipeable suggested-thumbnail strip',()=>{
@@ -464,4 +464,59 @@ test('Expanded long video shelf has no Up next button and exposes twelve suggest
   assert.match(css,/scroll-snap-type:x proximity/);
   assert.match(css,/touch-action:pan-x/);
   assert.match(css,/height:82px!important/);
+});
+
+test('Offline Video Pack is available from Offline Play and Settings but lazy-loaded',()=>{
+  const app=file('public/app.js'),html=file('public/index.html');
+  assert.match(app,/function showOfflineVideoPack\(\)/);
+  assert.match(app,/Offline Video Pack · 100 MB/);
+  assert.match(app,/\/offline-pack\.js/);
+  assert.match(app,/\/offline-pack-ui\.js/);
+  assert.match(app,/loadOwnedPack\(true\)/);
+  assert.match(app,/KidLiteOfflinePackUI\?\.dispose\(\)/);
+  assert.doesNotMatch(html,/src="\/offline-pack\.js"/);
+  assert.doesNotMatch(html,/src="\/offline-pack-ui\.js"/);
+});
+test('Rights-cleared media downloads are verified and bounded to 100 MB total',()=>{
+  const js=file('public/offline-pack.js');
+  assert.match(js,/ORIGIN_CAP=100000000/);
+  assert.match(js,/MEDIA_CAP=95000000/);
+  assert.match(js,/main:15,short:50/);
+  assert.match(js,/INITIAL=\{main:5,short:15\}/);
+  assert.match(js,/DAILY=\{main:2,short:5\}/);
+  assert.match(js,/offlineRights/);
+  assert.match(js,/licensed-offline/);
+  assert.match(js,/owned-media/);
+  assert.match(js,/crypto\.subtle\.digest\('SHA-256'/);
+  assert.match(js,/navigator\.storage\.estimate\(\)/);
+  assert.match(js,/chooseEvictions/);
+  assert.match(js,/lastPlayedAt/);
+  assert.match(js,/new Blob\(chunks/);
+  assert.doesNotMatch(js,/youtube-nocookie\.com|youtube\.com|ytimg\.com/);
+});
+test('Offline media is not double cached by service worker',()=>{
+  const sw=file('public/sw.js');
+  assert.match(sw,/kidlite-offline-v19/);
+  assert.match(sw,/\/offline-pack\.js/);
+  assert.match(sw,/\/offline-pack-ui\.js/);
+  assert.match(sw,/\/offline-video-manifest\.json/);
+  assert.match(sw,/url\.pathname\.startsWith\('\/owned-media\/'\)/);
+  const manifest=JSON.parse(file('public/offline-video-manifest.json'));
+  assert.equal(manifest.version,1);
+  assert.equal(manifest.videos.length,0);
+});
+test('Pack uses explicit consent, locally playable blobs, daily opt-in and guard script',()=>{
+  const ui=file('public/offline-pack-ui.js'),pack=file('public/offline-pack.js');
+  const pkg=JSON.parse(file('package.json'));
+  assert.match(ui,/window\.confirm\('Save '/);
+  assert.match(ui,/navigator\.storage\?\.persist\?\.\(\)/);
+  assert.match(ui,/window\.confirm\('Allow small automatic/);
+  assert.match(ui,/URL\.createObjectURL\(blob\)/);
+  assert.match(ui,/player\.append\(activeVideo\)/);
+  assert.match(pack,/navigator\.connection/);
+  assert.match(pack,/c\.type==='wifi'/);
+  assert.match(pack,/Date\.now\(\)-last<DAY/);
+  assert.match(pack,/window\.KidLiteOfflinePack/);
+  assert.equal(pkg.scripts['check:offline-media'],'node scripts/verify-offline-video-pack.mjs');
+  assert.ok(existsSync(path.join(root,'scripts/verify-offline-video-pack.mjs')));
 });

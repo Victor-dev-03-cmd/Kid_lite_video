@@ -22,6 +22,26 @@
     return freshness ? freshness.order(videos,{seed:state.feedSeed,channel:state.channel}) : videos;
   }
   let activeVideoSession = null;
+  let ownedPackLoader=null;
+  function loadOwnedPack(includeUI=false){
+    const loadScript=src=>new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src=src;script.async=true;
+      script.onload=resolve;
+      script.onerror=()=>reject(Error('Offline pack script unavailable: '+src));
+      document.head.append(script);
+    });
+    if(!ownedPackLoader){
+      ownedPackLoader=loadScript('/offline-pack.js')
+        .then(()=>window.KidLiteOfflinePack)
+        .catch(error=>{ownedPackLoader=null;throw error;});
+    }
+    if(!includeUI)return ownedPackLoader;
+    return ownedPackLoader.then(async pack=>{
+      if(!window.KidLiteOfflinePackUI)await loadScript('/offline-pack-ui.js');
+      return pack;
+    });
+  }
 
   function signedIn() { return Boolean(window.KidLiteAuth?.signedIn); }
   function setNav(view) {
@@ -37,6 +57,7 @@
     setNav(view);
   }
   function showActivity(title, render, view = 'offline', back = showHome) {
+    window.KidLiteOfflinePackUI?.dispose();
     // Stop the previous player and remove its fullscreen/orientation listeners before navigation.
     if (activeVideoSession) {
       const previous = activeVideoSession;
@@ -62,6 +83,7 @@
     window.scrollTo(0, 0);
   }
   function showHome() {
+    window.KidLiteOfflinePackUI?.dispose();
     if (activeVideoSession) {
       const previous = activeVideoSession;
       activeVideoSession = null;
@@ -527,6 +549,22 @@
     { title:'Offline Play', className:'play', image:'offline.svg', action: node => shortSlides(node, 'Offline Play', [['🎨','Try a color game.'],['📖','Read a picture story.'],['🎵','Listen to a gentle lullaby.']]) }
   ];
   // Cached YouTube metadata is browseable offline; official YouTube playback still needs internet.
+  function showOfflineVideoPack(){
+    showActivity('Offline Video Pack',node=>{
+      const status=document.createElement('p');
+      status.className='offline-pack-message';
+      status.textContent='Opening phone storage…';
+      node.append(status);
+      loadOwnedPack(true).then(()=>{
+        if(!node.isConnected)return;
+        node.replaceChildren();
+        window.KidLiteOfflinePackUI.render(node);
+      }).catch(error=>{
+        if(node.isConnected)status.textContent='Offline Video Pack unavailable: '+String(error.message||error);
+      });
+    },'offline',showOffline);
+  }
+
   async function showSavedCatalogue() {
     showActivity('Saved video titles', node => {
       const info = document.createElement('div');
@@ -611,6 +649,10 @@
         grid.appendChild(button);
       });
       node.appendChild(grid);
+      const pack=document.createElement('button');
+      pack.type='button';pack.className='offline-catalogue-trigger offline-pack-trigger';
+      pack.innerHTML='<span aria-hidden="true">💾</span><span><strong>Offline Video Pack · 100 MB</strong><small>Owned/licensed videos · up to 15 Main Videos + 50 Shorts</small></span><span aria-hidden="true">›</span>';
+      pack.onclick=showOfflineVideoPack;node.appendChild(pack);
       const saved = document.createElement('button');
       saved.type='button';saved.className='offline-catalogue-trigger';
       saved.innerHTML='<span aria-hidden="true">📋</span><span><strong>Saved video titles</strong><small>Browse the last synced list without data · YouTube playback needs internet</small></span><span aria-hidden="true">›</span>';
@@ -652,6 +694,7 @@
         else document.getElementById('clerk-user-button')?.querySelector('button')?.click();
       });
       item(general,'📚','Offline Play','Stories, mini shorts and games',showOffline);
+      item(general,'💾','Offline Video Pack','100 MB phone storage · originals only',showOfflineVideoPack);
       item(general,'📋','Saved video titles','Lightweight offline catalogue',showSavedCatalogue);
       if (!window.KidLiteInstall?.installed) {
         item(general,'📲','Install KidLite','Add to Home Screen',() => window.KidLiteInstall?.open());
@@ -723,7 +766,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v18');
+      const cache=await caches.open('kidlite-offline-v19');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);
@@ -740,7 +783,19 @@
     navigator.serviceWorker.addEventListener('controllerchange',updateOfflineReady);
   }
 
-  window.KidLiteApp = { showHome, showOffline, showSettings };
+  // No media transfers on first visit unless a parent has enabled Wi-Fi auto-sync.
+  const maybeOwnedPackAuto=()=>{
+    if(!signedIn())return;
+    try{if(localStorage.getItem('kidlite.owned-pack.wifi-auto.v1')!=='1')return;}
+    catch(_){return;}
+    loadOwnedPack().then(pack=>pack.maybeWifiSync()).catch(()=>{});
+  };
+  window.addEventListener('online',maybeOwnedPackAuto);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible')maybeOwnedPackAuto();
+  });
+  window.addEventListener('load',maybeOwnedPackAuto,{once:true});
+  window.KidLiteApp = { showHome, showOffline, showSettings, showOfflineVideoPack };
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
   }
