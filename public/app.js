@@ -2,12 +2,15 @@
   'use strict';
   const home = document.getElementById('main-view');
   const activity = document.getElementById('activity-view');
+  const authScreen = document.getElementById('auth-screen');
+  const dock = document.querySelector('.dock');
   const navButtons = Array.from(document.querySelectorAll('.dock-button'));
   function setNav(view) {
     navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
   }
   function showActivity(title, render, view = 'offline') {
-    home.classList.add('hidden'); activity.classList.remove('hidden'); activity.replaceChildren();
+    authScreen.classList.add('hidden'); home.classList.add('hidden'); activity.classList.remove('hidden'); activity.replaceChildren();
+    dock.classList.toggle('hidden', !window.KidLiteAuth?.signedIn);
     const header = document.createElement('div'); header.className = 'activity-header';
     const h = document.createElement('h1'); h.textContent = title;
     const back = document.createElement('button'); back.className = 'text-button'; back.textContent = '← Back'; back.onclick = showHome;
@@ -16,7 +19,12 @@
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   function showHome() {
-    activity.classList.add('hidden'); activity.replaceChildren(); home.classList.remove('hidden'); setNav('home');
+    activity.classList.add('hidden'); activity.replaceChildren(); setNav('home');
+    if (window.KidLiteAuth?.signedIn) {
+      authScreen.classList.add('hidden'); home.classList.remove('hidden'); dock.classList.remove('hidden');
+    } else {
+      home.classList.add('hidden'); authScreen.classList.remove('hidden'); dock.classList.add('hidden');
+    }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   function showOffline() {
@@ -47,6 +55,7 @@
     else if (button.dataset.view === 'shorts') showUnfinished('Shorts', 'Short videos from parent-approved channels are coming in Phase 2.', 'shorts');
     else showUnfinished('Parent controls', 'Parent sign-in and the PIN-protected control panel are coming in Phase 2.', 'parent');
   });
+  window.KidLiteApp = { showHome, showOffline };
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
   }

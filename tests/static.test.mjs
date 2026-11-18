@@ -31,3 +31,12 @@ test('Offline shell stays lightweight', () => {
   const bytes = files.reduce((sum, f) => sum + statSync(path.join(root, 'public', f)).size, 0);
   assert.ok(bytes < 2_000_000);
 });
+
+test('Clerk frontend wiring is present and uses the public key config endpoint', () => {
+  assert.match(file('public/index.html'), /id="auth-screen"/);
+  assert.match(file('public/index.html'), /src="\/auth\.js"/);
+  assert.match(file('public/auth.js'), /fetch\('\/api\/config'/);
+  assert.match(file('public/auth.js'), /clerk\.mountSignIn/);
+  assert.match(file('public/auth.js'), /clerk\.mountSignUp/);
+  assert.match(file('public/auth.js'), /session\.getToken/);
+});

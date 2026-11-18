@@ -1,5 +1,5 @@
-const CACHE_NAME = 'kidlite-offline-v1';
-const OFFLINE_ASSETS = ['/', '/index.html', '/styles.css', '/app.js', '/offline-games.js', '/manifest.json', '/icons/icon.svg', '/icons/maskable.svg'];
+const CACHE_NAME = 'kidlite-offline-v2';
+const OFFLINE_ASSETS = ['/', '/index.html', '/styles.css', '/auth.css', '/app.js', '/auth.js', '/offline-games.js', '/manifest.json', '/icons/icon.svg', '/icons/maskable.svg'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(OFFLINE_ASSETS)).then(() => self.skipWaiting()));
 });

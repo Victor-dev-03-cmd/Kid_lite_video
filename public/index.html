@@ -8,15 +8,32 @@
   <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/auth.css" />
   <title>KidLite — Little space, big curiosity</title>
 </head>
 <body>
   <div id="app">
     <header class="topbar">
       <div class="brand"><span class="brand-mark" aria-hidden="true">✳</span><span>Kid<span class="brand-light">Lite</span></span></div>
-      <div class="top-status"><span class="chip chip-success"><span class="dot"></span> Offline ready</span><span class="chip chip-time" id="time-chip" title="Screen-time enforcement activates after secure setup">⏱ Parent setup needed</span><button type="button" class="install-trigger" id="install-btn">Install app</button></div>
+      <div class="top-status"><div id="clerk-user-button" class="hidden" aria-label="Parent account"></div><span class="chip chip-success"><span class="dot"></span> Offline ready</span><span class="chip chip-time" id="time-chip" title="Screen-time enforcement activates after secure setup">⏱ Parent setup needed</span><button type="button" class="install-trigger" id="install-btn">Install app</button></div>
     </header>
-    <main class="container" id="main-view">
+    <section id="auth-screen" class="container auth-layout" aria-label="Parent sign in">
+      <div class="auth-intro">
+        <div class="eyebrow">✦ WELCOME TO KIDLITE</div>
+        <h1>Your family’s happy<br /><span class="gradient-word">little corner.</span></h1>
+        <p>Parents can sign in or create an account. Offline games are available without signing in.</p>
+      </div>
+      <div class="auth-card">
+        <div class="auth-card-header"><span class="brand-mark" aria-hidden="true">✳</span><div><h2>Parent sign in</h2><p>Protected by Clerk</p></div></div>
+        <p id="auth-status" class="auth-status" role="status">Preparing secure sign-in…</p>
+        <div id="clerk-auth-mount"></div>
+        <button type="button" id="switch-auth-mode" class="auth-link">Create an account</button>
+        <div class="auth-divider">OR</div>
+        <button type="button" id="guest-offline" class="guest-button">🎨 Play offline without signing in</button>
+      </div>
+      <p class="auth-disclaimer">Parent PIN, channel approval, and screen-time controls are still in development.</p>
+    </section>
+    <main class="container hidden" id="main-view">
       <section class="welcome">
         <div class="eyebrow"><span class="sparkle">✦</span> A LITTLE SPACE FOR BIG CURIOSITY</div>
         <h1>Happy learning,<br /><span class="gradient-word">little explorers.</span></h1>
@@ -34,10 +51,10 @@
       </section>
       <section class="section-heading"><h2>Made for little minds</h2><span>Gentle by design</span></section>
       <div class="trust-row"><div><span>🛡️</span><strong>Parent-curated</strong><small>Only parent-approved channels, once setup is complete</small></div><div><span>🍃</span><strong>Lightweight</strong><small>Fast shell, offline games, no video downloads</small></div><div><span>💛</span><strong>No clutter</strong><small>Simple, distraction-light navigation</small></div></div>
-      <div class="notice"><strong>Development preview</strong><p>Video browsing, account sign-in, PIN lock, and screen-time enforcement are not active yet. Offline activities are available now.</p></div>
+      <div class="notice"><strong>Development preview</strong><p>Video browsing, PIN lock, and screen-time enforcement are not active yet. Offline activities are available now.</p></div>
     </main>
     <section id="activity-view" class="container hidden" aria-live="polite"></section>
-    <nav class="dock" aria-label="Main navigation">
+    <nav class="dock hidden" aria-label="Main navigation">
       <button type="button" class="dock-button active" data-view="home"><span aria-hidden="true">⌂</span><small>Home</small></button>
       <button type="button" class="dock-button" data-view="shorts"><span aria-hidden="true">▣</span><small>Shorts</small></button>
       <button type="button" class="dock-button" data-view="offline"><span aria-hidden="true">◈</span><small>Offline Play</small></button>
@@ -47,5 +64,6 @@
   <dialog id="install-dialog" class="install-dialog"><form method="dialog"><h2>Keep KidLite nearby</h2><p id="install-instructions">Add this app to your home screen to open your offline games anytime.</p><button class="primary-button" type="submit">Got it</button></form></dialog>
   <script src="/offline-games.js" defer></script>
   <script src="/app.js" defer></script>
+  <script src="/auth.js" defer></script>
 </body>
 </html>

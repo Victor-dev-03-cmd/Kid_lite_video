@@ -24,3 +24,14 @@ Connect this GitHub repository to Vercel, select the repo root as the project ro
 - This initial build uses small direct DOM updates rather than the Mango runtime.
 
 See [ROADMAP.md](./ROADMAP.md) for planned milestones.
+
+## Clerk sign-in (Phase 1.5)
+
+The Vanilla JavaScript frontend now supports Clerk **Sign in / Create account** using only `CLERK_PUBLISHABLE_KEY`.
+1. In Vercel → Project → Settings → Environment Variables add `CLERK_PUBLISHABLE_KEY=pk_test_...` (or your matching production key) and redeploy.
+2. Open the KidLite site. The Clerk auth widget should appear, and a signed-in parent sees the home dashboard and Clerk account button.
+3. Offline Play works without logging in, even if the network is unavailable after assets have been cached.
+4. `CLERK_SECRET_KEY` is still necessary for securely authenticated Hono backend routes; family database, PIN, YouTube allowlist, and screen-time APIs are not yet enabled.
+5. The client SDK is loaded from the Clerk domain encoded in your publishable key. The backend exposes only the publishable key via `/api/config`. Keep every secret server-only.
+
+The Clerk Dashboard (for configuring API keys) and the KidLite in-app dashboard are separate.
