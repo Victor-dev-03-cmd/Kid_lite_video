@@ -40,7 +40,7 @@ async function channelVideos(key:string, channelKey:string):Promise<Video[]> {
   if (cached && cached.until>Date.now()) return cached.videos;
   const channel=CHANNELS[channelKey];
   if(!channel) return [];
-  const lookup = channel.id ? {id:channel.id} : {forHandle:channel.handle!};
+  const lookup: Record<string, string> = channel.id ? { id: channel.id } : { forHandle: channel.handle! };
   const results = await youtube('channels',{part:'snippet,contentDetails',...lookup},key);
   const match = results.items?.[0];
   const id: string | undefined=match?.id;
