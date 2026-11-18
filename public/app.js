@@ -7,7 +7,6 @@
   const feed = document.getElementById('video-feed');
   const feedStatus = document.getElementById('feed-status');
   const search = document.getElementById('video-query');
-  const age = document.getElementById('age-select');
   const channelButtons = [...document.querySelectorAll('[data-channel]')];
   const navButtons = [...document.querySelectorAll('.dock-button')];
   const state = { channel: 'tamil', requestNumber: 0, videos: [], shorts: [], timer: null, hasLoaded: false };
@@ -106,9 +105,16 @@
   async function loadVideos() {
     const requestNumber = ++state.requestNumber;
     const params = new URLSearchParams({
-      age: age.value, channel: state.channel, q: search.value.trim(), kind: 'video'
+      age: 'all', channel: state.channel, q: search.value.trim(), kind: 'video'
     });
     state.hasLoaded = true;
+    if (state.channel === 'originals') {
+      // Original video releases are not available yet; never label third-party YouTube content as ours.
+      state.videos = [];
+      feed.replaceChildren();
+      feedStatus.textContent = 'KidLite Originals videos are coming soon.';
+      return;
+    }
     feedStatus.textContent = 'Loading videos…';
     feed.replaceChildren();
     try {
@@ -145,33 +151,80 @@
     clearTimeout(state.timer);
     state.timer = setTimeout(loadVideos, 180);
   });
-  age.addEventListener('change', loadVideos);
 
-  function showVideo(video, fromShorts = false) {
-    // IDs must come from the server-owned fixed allowlist, never from a URL parameter.
-    if (!validVideo(video) || ![...state.videos,...state.shorts].some(v => v.id === video.id)) return;
-    showActivity(fromShorts ? 'Shorts' : 'Now Playing', node => {
-      const player = document.createElement('div'); player.className = fromShorts ? 'video-player short' : 'video-player';
+  function showVideo(video) {
+    // Only recommend metadata returned by the server's allowlisted channel feed.
+    if (!validVideo(video) || !state.videos.some(item => item.id === video.id)) return;
+    const suggestions = state.videos
+      .filter(item => validVideo(item) && item.id !== video.id)
+      .sort((a, b) => Number(b.channelKey === video.channelKey) - Number(a.channelKey === video.channelKey))
+      .slice(0, 4);
+
+    showActivity('Now Playing', node => {
+      const player = document.createElement('div');
+      player.className = 'video-player';
       const frame = document.createElement('iframe');
       frame.src = 'https://www.youtube-nocookie.com/embed/' + video.id + '?rel=0&playsinline=1&autoplay=1';
       frame.title = video.title + ' on YouTube';
       frame.allow = 'autoplay; accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen';
       frame.allowFullscreen = true;
-      frame.loading = 'eager'; frame.referrerPolicy = 'strict-origin-when-cross-origin';
+      frame.loading = 'eager';
+      frame.referrerPolicy = 'strict-origin-when-cross-origin';
       player.appendChild(frame);
-      const heading = document.createElement('h2'); heading.className = 'player-title'; heading.textContent = video.title;
-      const channel = document.createElement('p'); channel.className = 'player-channel'; channel.textContent = video.channel + ' · YouTube';
-      const linkRow = document.createElement('div'); linkRow.className = 'player-links';
-      const link = document.createElement('a'); link.className = 'youtube-link';
-      link.href = fromShorts ? 'https://www.youtube.com/shorts/' + video.id : 'https://www.youtube.com/watch?v=' + video.id;
-      link.target = '_blank'; link.rel = 'noopener noreferrer';
-      link.className = 'youtube-icon-link';
-      link.title = 'Open on YouTube';
-      link.setAttribute('aria-label', 'Open on YouTube');
-      link.innerHTML = '<svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="5" fill="#f03c40"/><path d="m10 5 7 4-7 4z" fill="white"/></svg>';
-      linkRow.append(link);
-      node.append(player, heading, channel, linkRow);
-    }, fromShorts ? 'shorts' : 'home', fromShorts ? showShorts : showHome);
+
+      const heading = document.createElement('h2');
+      heading.className = 'player-title';
+      heading.textContent = video.title;
+      const metadata = document.createElement('div');
+      metadata.className = 'player-meta';
+      const channel = document.createElement('p');
+      channel.className = 'player-channel';
+      channel.textContent = video.channel + ' · YouTube';
+      const youtubeLink = document.createElement('a');
+      youtubeLink.className = 'youtube-icon-link';
+      youtubeLink.href = 'https://www.youtube.com/watch?v=' + video.id;
+      youtubeLink.target = '_blank';
+      youtubeLink.rel = 'noopener noreferrer';
+      youtubeLink.title = 'Open on YouTube';
+      youtubeLink.setAttribute('aria-label', 'Open on YouTube');
+      youtubeLink.innerHTML = '<svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="5" fill="#f03c40"/><path d="m10 5 7 4-7 4z" fill="white"/></svg>';
+      metadata.append(channel, youtubeLink);
+      node.append(player, heading, metadata);
+
+      if (suggestions.length) {
+        const section = document.createElement('section');
+        section.className = 'video-suggestions';
+        section.setAttribute('aria-label', 'Four suggested videos');
+        const title = document.createElement('h3');
+        title.textContent = 'Up next';
+        section.appendChild(title);
+        const list = document.createElement('div');
+        list.className = 'suggestion-list';
+        for (const suggested of suggestions) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'suggestion-card';
+          button.setAttribute('aria-label', 'Play ' + suggested.title);
+          const thumb = document.createElement('img');
+          thumb.src = suggested.thumbnail || ('https://i.ytimg.com/vi/' + suggested.id + '/hqdefault.jpg');
+          thumb.alt = '';
+          thumb.loading = 'lazy';
+          thumb.decoding = 'async';
+          const details = document.createElement('span');
+          details.className = 'suggestion-details';
+          const suggestedTitle = document.createElement('strong');
+          suggestedTitle.textContent = suggested.title;
+          const suggestedChannel = document.createElement('small');
+          suggestedChannel.textContent = suggested.channel;
+          details.append(suggestedTitle, suggestedChannel);
+          button.append(thumb, details);
+          button.onclick = () => showVideo(suggested);
+          list.appendChild(button);
+        }
+        section.appendChild(list);
+        node.appendChild(section);
+      }
+    }, 'home', showHome);
   }
 
   function shortSlides(node, title, scenes) {
@@ -219,7 +272,7 @@
 
   function showShorts() {
     // Fullscreen player opens immediately, with one embed and no list of watch buttons.
-    window.KidLiteShorts.open({ age: age.value, onExit: showHome });
+    window.KidLiteShorts.open({ age: 'all', onExit: showHome });
   }
 
   function showSettings() {
@@ -318,7 +371,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v7');
+      const cache=await caches.open('kidlite-offline-v8');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

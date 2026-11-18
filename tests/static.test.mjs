@@ -59,7 +59,6 @@ test('Compact top search and 4 tabs stay wired', () => {
 test('Video home and offline grid have separate navigation destinations', () => {
   const html = file('public/index.html');
   assert.match(html, /id="video-feed"/);
-  assert.match(html, /id="age-select"/);
   assert.match(html, /id="video-query"/);
   assert.match(html, /data-channel="cocomelon"/);
   assert.match(html, /data-channel="kidschannel"/);
@@ -90,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v7/);
+  assert.match(file('public/app.js'), /kidlite-offline-v8/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -124,4 +123,31 @@ test('Fresh Tamil badge and compact normal-player YouTube link work without hidi
   assert.match(app, /youtube-nocookie\.com\/embed/);
   assert.match(css, /\.shorts-overlay\{/);
   assert.match(css, /\.fresh-video-badge\{/);
+});
+
+test('Home begins with channels; heading, age selector and source banner are removed', () => {
+  const html = file('public/index.html');
+  const start = html.indexOf('<main id="main-view"');
+  const tabs = html.indexOf('class="channel-tabs"', start);
+  const feed = html.indexOf('id="video-feed"', tabs);
+  assert.ok(start >= 0 && tabs > start && feed > tabs);
+  assert.doesNotMatch(html, /class="feed-heading"|class="feed-tools"|id="age-select"|class="youtube-source"/);
+  assert.match(html, /id="header-search"[^>]*hidden/);
+  assert.match(html, /data-channel="tamil"/);
+});
+test('Normal video player lists at most four other allowlisted suggestions', () => {
+  const app = file('public/app.js');
+  assert.match(app, /const suggestions = state\.videos/);
+  assert.match(app, /\.slice\(0, 4\)/);
+  assert.match(app, /item\.id !== video\.id/);
+  assert.match(app, /validVideo\(item\)/);
+  assert.match(app, /button\.onclick = \(\) => showVideo\(suggested\)/);
+});
+
+test('Originals has an explicit truthful empty state', () => {
+  const html = file('public/index.html');
+  const app = file('public/app.js');
+  assert.match(html, /data-channel="originals"/);
+  assert.match(app, /state\.channel === 'originals'/);
+  assert.match(app, /Originals videos are coming soon/);
 });

@@ -83,3 +83,12 @@ Do not launch the child-directed product broadly until YouTube child-directed AP
 - Arrow Up/Down or Page Up/Down, mouse-wheel (outside the iframe), and swipe from the **dark margins around the player** navigate Shorts. Because YouTube's player is a cross-origin iframe, a swipe performed on top of its video surface cannot reliably be captured by KidLite; covering the player with a gesture overlay would obstruct YouTube controls and is intentionally not implemented.
 - Normal videos stay inside KidLite in the privacy-enhanced YouTube player. The app's own verbose "Open on YouTube" text has been replaced by a compact, accessible YouTube icon. **YouTube may still show "Watch on YouTube", its branding, player controls, ads or related videos inside its iframe; these must not be cropped, obscured, or misrepresented.**
 - This is still a development preview. Server-enforced per-family channel approval, child safety review, YouTube child-directed app designation, PIN and screen-time limits remain outstanding.
+
+## Phase 1.9 — Clean Home header and four suggestions
+
+- Removed the Videos heading, YouTube source badge, age selector and explanatory block above the channel chips. The collapsed search field stays exclusively in the top navigation and opens on icon tap.
+- Home begins with the Tamil-first channel chips followed immediately by video thumbnails. Server filtering remains restricted to the fixed allowlisted channels; the client requests age=all because the visible age selector was removed.
+- Clicking a normal video opens the in-app YouTube embed, with **up to four** additional videos underneath. Suggestions come only from the currently server-returned, approved-channel feed, prefer the current channel, exclude the current video, and never add external arbitrary suggestions. A narrow search can yield fewer than four.
+- Native YouTube embed annotations and end-screen suggestions cannot be guaranteed hidden from inside its cross-origin player. The four-item cap applies to KidLite's own suggestions only.
+
+- A distinct **Originals** channel chip is retained as an honest empty state until KidLite-owned original videos are published. It is not mapped to external YouTube videos.
