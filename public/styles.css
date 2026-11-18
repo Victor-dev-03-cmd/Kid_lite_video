@@ -262,3 +262,16 @@ html{overscroll-behavior-y:auto}
 .install-later:focus-visible{outline:2px solid #8b64de}
 @media(display-mode:standalone){.install-dialog{display:none!important}}
 @media(display-mode:fullscreen){.install-dialog{display:none!important}}
+
+/* Shorts player reuse: a native background poster (BEHIND the YouTube iframe).
+   The YouTube controls remain interactive and are never covered by an overlay. */
+.shorts-video-slot .shorts-player{
+  background-color:#07070b;
+  background-position:center center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  transform:translateZ(0);
+  isolation:isolate;
+}
+.shorts-video-slot .shorts-player iframe{position:relative;z-index:1}
+.shorts-video-slot .shorts-player.shorts-buffering{background-color:#101018}

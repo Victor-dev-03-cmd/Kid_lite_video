@@ -117,3 +117,12 @@ Do not launch the child-directed product broadly until YouTube child-directed AP
 - When the approved-source pool is exhausted, the app shows a caught-up message and offers **explicit replay**, not an automatic loop. There cannot be an infinite supply of genuinely new videos if the approved channels have no new uploads; the API freshness depends on YouTube and cache TTL.
 - User-requested swipe **beginning on top of a YouTube iframe** cannot be captured cross-origin. We preserve the native YouTube player surface, ads, attribution and controls rather than overlaying a transparent gesture-capture layer. Gestures work on the app-owned edge and letterbox regions. Truly native full-video swipe would require the official YouTube Shorts experience or rights-cleared self-hosted videos.
 - This is a code-level improvement; mobile touch UX, browser installation variations and video pagination still require device E2E testing.
+
+## Phase 1.13 — Faster YouTube Shorts transitions
+
+- Shorts now uses **one official IFrame Player API instance** with enablejsapi=1 and origin-bound control, calling player.loadVideoById(nextId) when swiping instead of reconstructing an iframe each time.
+- The Player API script is requested in parallel with metadata. An API failure watchdog falls back to changing the URL of the existing single iframe; the player is destroyed when leaving the viewer.
+- Only previous/current/next **metadata** is kept in a virtual window. At most two small next-video thumbnails are prefetched when Data Saver is off. No hidden YouTube video players or streams are prefetched.
+- Connection hints are added for YouTube API, privacy-enhanced player and ytimg.
+- Posters are applied **behind** the interactive official YouTube iframe, not as overlays on controls/ads. The background is removed on the PLAYING event. Autoplay-block events are handled.
+- This reduces repeated iframe startup overhead but **cannot guarantee zero-delay or 0.2-second video transitions**. Real-device performance measurement is still required.

@@ -5,6 +5,108 @@
   const approved = new Set(['chuchutamil','pattampoochi','infobellstamil',
     'shemarootamil','chuttykannamma','kidstvtamil','cocomelon','kidschannel']);
   let active = null;
+
+  let youtubeApiPromise=null;
+  function youtubeEmbed(id){
+    const params=new URLSearchParams({
+      enablejsapi:'1',origin:location.origin,playsinline:'1',autoplay:'1',rel:'0'
+    });
+    return 'https://www.youtube-nocookie.com/embed/'+id+'?'+params;
+  }
+  function loadYouTubeAPI(){
+    if(window.YT?.Player)return Promise.resolve(window.YT);
+    if(youtubeApiPromise)return youtubeApiPromise;
+    youtubeApiPromise=new Promise((resolve,reject)=>{
+      const previous=window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady=()=>{
+        if(typeof previous==='function')try{previous();}catch(_){}
+        if(window.YT?.Player)resolve(window.YT);
+        else reject(new Error('YouTube API not available'));
+      };
+      const script=document.createElement('script');
+      script.src='https://www.youtube.com/iframe_api';
+      script.async=true;
+      script.onerror=()=>reject(new Error('YouTube Player API did not load'));
+      document.head.appendChild(script);
+    }).catch(error=>{
+      youtubeApiPromise=null;throw error;
+    });
+    return youtubeApiPromise;
+  }
+  function mediaPoster(video){
+    // One lightweight browser-managed image, NOT a cached video download.
+    return 'https://i.ytimg.com/vi/'+video.id+'/mqdefault.jpg';
+  }
+  function prepareNear(s){
+    s.virtualWindow={
+      previous:s.items[s.index-1]||null,
+      current:s.items[s.index]||null,
+      next:s.items[s.index+1]||null
+    };
+    const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    const slow=connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType||'');
+    if(slow)return;
+    // Preload at most TWO small thumbnails. Do not pre-create background YouTube iframes.
+    for(const v of [s.items[s.index+1],s.items[s.index+2]]){
+      if(!v || s.preparedThumbnails.has(v.id))continue;
+      if(s.preparedThumbnails.size>=5)s.preparedThumbnails.clear();
+      s.preparedThumbnails.add(v.id);
+      const image=new Image();
+      image.decoding='async';
+      image.src=mediaPoster(v);
+    }
+  }
+  function disposePlayer(s){
+    try{s.player?.destroy();}catch(_){}
+    clearTimeout(s.apiWatchdog);
+    s.player=null;s.frame=null;s.playerReady=false;s.playerPending=false;
+  }
+  function attachApi(s){
+    if(s.playerPending||s.playerReady)return;
+    s.playerPending=true;
+    // Degrade to one normal iframe if the IFrame API is unavailable on this device.
+    s.apiWatchdog=setTimeout(()=>{
+      if(active!==s || s.playerReady || !s.frame)return;
+      s.playerFailed=true;
+      if(s.requestedId && s.requestedId!==s.initialId) {
+        s.frame.src=youtubeEmbed(s.requestedId);
+      }
+    },5000);
+    loadYouTubeAPI().then(YT=>{
+      if(active!==s||!s.frame?.isConnected)return;
+      try{
+        s.player=new YT.Player(s.frame,{
+          events:{
+            onReady:event=>{
+              if(active!==s)return;
+              s.player=event.target;s.playerReady=true;s.playerFailed=false;
+              clearTimeout(s.apiWatchdog);
+              if(s.requestedId!==s.initialId && typeof s.player.loadVideoById==='function'){
+                s.player.loadVideoById(s.requestedId);
+              }
+            },
+            onStateChange:event=>{
+              if(active!==s)return;
+              if(event.data===YT.PlayerState.PLAYING){
+                s.holder?.classList.remove('shorts-buffering');
+                s.holder?.style.removeProperty('background-image');
+                s.playbackStartMs=Date.now()-s.lastVideoSwitchAt;
+              }else if(event.data===YT.PlayerState.BUFFERING){
+                s.holder?.classList.add('shorts-buffering');
+              }
+            },
+            onAutoplayBlocked:()=>{
+              if(active===s)s.description.textContent='Tap the YouTube play control to start the Short.';
+            },
+            onError:()=>{
+              if(active===s)s.description.textContent='This YouTube Short could not play.';
+            }
+          }
+        });
+      }catch(_){s.playerFailed=true;}
+    }).catch(()=>{if(active===s)s.playerFailed=true;});
+  }
+
   const SEEN_KEY='kidlite.shorts.shown.v1';
   function seenHistory(){
     try{
@@ -27,6 +129,7 @@
     const session = active;
     active = null;
     session.controller.abort();
+    disposePlayer(session);
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('fullscreenchange', fullscreenChange);
     // Removing the iframe prevents audio continuing behind the Home view.
@@ -111,29 +214,49 @@
     });
     return rail;
   }
-  function render() {
-    const s = active;
-    if (!s || !s.items.length) return;
-    const video = s.items[s.index];
-    s.slot.replaceChildren(); // exactly one heavy YouTube player
-    const player = document.createElement('div');
-    player.className = 'shorts-player';
-    const iframe = document.createElement('iframe');
-    iframe.src = 'https://www.youtube-nocookie.com/embed/' + video.id +
-      '?playsinline=1&autoplay=1&rel=0';
-    iframe.title = video.title + ' · ' + video.channel + ' · YouTube';
-    iframe.allow = 'autoplay; encrypted-media; gyroscope; accelerometer; picture-in-picture; fullscreen';
-    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-    iframe.allowFullscreen = true;
-    iframe.loading = 'eager';
-    player.append(iframe);
-    s.slot.append(player);
-    s.description.textContent = (s.index + 1) + ' of ' +
-      s.items.length + ' — ' + video.title + ' — ' + video.channel;
+  function render(){
+    const s=active;
+    if(!s||!s.items.length)return;
+    const video=s.items[s.index];
+    prepareNear(s);
+    s.lastVideoSwitchAt=Date.now();
+    s.requestedId=video.id;
+    if(!s.holder || !s.frame?.isConnected){
+      s.slot.replaceChildren(); // Initial creation only, NOT on each swipe.
+      const holder=document.createElement('div');
+      holder.className='shorts-player shorts-buffering';
+      holder.style.backgroundImage='url("'+mediaPoster(video)+'")';
+      const frame=document.createElement('iframe');
+      frame.id='kidlite-shorts-youtube-player';
+      frame.src=youtubeEmbed(video.id);
+      frame.title=video.title+' · '+video.channel+' · YouTube';
+      frame.allow='autoplay; encrypted-media; gyroscope; accelerometer; picture-in-picture; fullscreen';
+      frame.referrerPolicy='strict-origin-when-cross-origin';
+      frame.allowFullscreen=true;
+      frame.loading='eager';
+      holder.append(frame);
+      s.holder=holder;s.frame=frame;s.initialId=video.id;
+      s.slot.append(holder);
+      attachApi(s);
+    }else{
+      s.holder.classList.add('shorts-buffering');
+      // Poster is the PLAYER BACKGROUND only; it does not cover the YouTube iframe/UI.
+      s.holder.style.backgroundImage='url("'+mediaPoster(video)+'")';
+      if(s.playerReady && typeof s.player?.loadVideoById==='function'){
+        try{s.player.loadVideoById(video.id);}catch(_){s.frame.src=youtubeEmbed(video.id);}
+      }else if(s.playerFailed){
+        // When YouTube JS API is blocked, retain one iframe and update only its URL.
+        s.frame.src=youtubeEmbed(video.id);
+      }
+      // During initial API bootstrap, onReady loads s.requestedId, not another iframe.
+    }
+    s.description.textContent=(s.index+1)+' · '+video.title+' · '+video.channel;
     markShown(video.id);
     if(s.hasMore && s.items.length-s.index<=4)loadNext(s);
   }
   function showMessage(s, message, retry = false) {
+    disposePlayer(s);
+    s.holder=null;
     s.slot.replaceChildren();
     const panel = document.createElement('div');
     panel.className = 'shorts-message';
@@ -253,7 +376,10 @@
     const age=['all','2-5','6-9','10-12'].includes(options.age)?options.age:'all';
     const s={overlay,slot,description,age,controller:new AbortController(),
       items:[],ids:new Set(),index:0,page:0,hasMore:true,loading:null,pendingNext:false,
-      lastSwitch:0,onExit:options.onExit,enteredFullscreen:false};
+      lastSwitch:0,onExit:options.onExit,enteredFullscreen:false,
+      player:null,frame:null,holder:null,playerReady:false,playerPending:false,
+      playerFailed:false,requestedId:null,initialId:null,lastVideoSwitchAt:0,
+      playbackStartMs:0,preparedThumbnails:new Set(),virtualWindow:null,apiWatchdog:null};
     active=s;
     let lastWheel=0;
     overlay.addEventListener('wheel',event=>{
@@ -276,6 +402,8 @@
         }).catch(()=>{});
       } catch (_) {}
     }
+    // Start fetching the API script in parallel with the approved metadata request.
+    loadYouTubeAPI().catch(()=>{});
     showMessage(s,'Loading fresh Shorts…');
     loadNext(s);
   }

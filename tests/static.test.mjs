@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v11/);
+  assert.match(file('public/app.js'), /kidlite-offline-v12/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -160,7 +160,7 @@ test('Shorts support pointer/touch navigation without prefetching video assets',
   assert.match(js, /touchend/);
   assert.match(js, /s\.slot\.replaceChildren\(\)/);
   assert.match(js, /lastSwitch/);
-  assert.doesNotMatch(js, /new Image\(/);
+  assert.match(js, /new Image\(/);
   assert.match(css, /\.shorts-video-slot/);
   assert.match(css, /touch-action:none/);
 });
@@ -183,7 +183,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v11/);
+  assert.match(worker,/kidlite-offline-v12/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -215,7 +215,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v11/);
+  assert.match(app,/kidlite-offline-v12/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -246,4 +246,29 @@ test('Shorts retain local seen IDs and page through fresh approved content',()=>
   assert.match(api,/nextPage/);
   assert.match(api,/perPage=20/);
   assert.match(api,/s-maxage=180/);
+});
+
+test('Single YouTube IFrame API player is reused across Shorts',()=>{
+  const js=file('public/shorts.js');
+  assert.match(js,/new YT\.Player\(s\.frame/);
+  assert.match(js,/enablejsapi:'1'/);
+  assert.match(js,/origin:location\.origin/);
+  assert.match(js,/s\.player\.loadVideoById\(video\.id\)/);
+  assert.match(js,/onStateChange/);
+  assert.match(js,/PlayerState\.PLAYING/);
+  assert.match(js,/onAutoplayBlocked/);
+  assert.match(js,/apiWatchdog/);
+  assert.match(js,/disposePlayer\(session\)/);
+  assert.match(js,/virtualWindow/);
+  assert.match(js,/s\.preparedThumbnails/);
+  assert.match(js,/new Image\(\)/);
+});
+test('Player connection hints and compliant poster background',()=>{
+  const html=file('public/index.html'),css=file('public/styles.css'),js=file('public/shorts.js');
+  assert.match(html,/preconnect" href="https:\/\/www\.youtube\.com"/);
+  assert.match(html,/preconnect" href="https:\/\/www\.youtube-nocookie\.com"/);
+  assert.match(html,/preconnect" href="https:\/\/i\.ytimg\.com"/);
+  assert.match(html,/dns-prefetch/);
+  assert.match(css,/background-position:center center/);
+  assert.match(js,/style\.backgroundImage/);
 });
