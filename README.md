@@ -56,3 +56,20 @@ The site uses the Vercel **Other** framework preset (`framework: null` in `verce
 - **Shorts** remain a separate navigation item; live YouTube Shorts are not yet reviewed. The **Offline Play** tab contains the old colorful six-card bento grid plus original local, tap-through mini stories and games. No YouTube content is cached or downloaded.
 - YouTube may show ads, related videos and external links in its embeds. The app cannot technically guarantee ad-free or fully controlled playback.
 - **Before public child-directed launch:** designate the site as child-directed in the applicable Google/YouTube developer tools, review YouTube child-directed policies, check Made For Kids status/embedding permission, obtain legal privacy review, enable and verify Parent PIN and screen-time enforcement, and test with real parents. The current prototype is not a fully audited child-safe product.
+
+## Tamil channels, top search and real YouTube fetch (Phase 1.7)
+
+**Requested navigation**
+- Top bar has the cheerful KidLite logo, expandable search icon, notifications (empty until a real notification service exists), Clerk profile button, and install shortcut. No offline-status pill in the header.
+- Bottom bar retains Home, Shorts, Offline Play and Settings. The offline item gets a green indicator only after all critical first-party offline assets have been confirmed in the local cache.
+- Search field is hidden until the top search icon is tapped. The age selector and fixed, parent-selected channel chips remain in the video feed.
+
+**Allowlisted channels**
+CoComelon, Kids Channel, ChuChu TV Tamil, Pattampoochi, Infobells Tamil, Shemaroo Kids Tamil, Chutty Kannamma, and Kids TV Tamil. IDs are either verified static channel IDs or resolved from fixed official YouTube handles. A child cannot add arbitrary channels or submit an unrestricted YouTube search request.
+
+**YouTube integration**
+The server-only `YOUTUBE_API_KEY` is used for `channels.list`, `playlistItems.list`, and `videos.list`, not sent to browsers. Calls are cached for 30 minutes per channel in a warm function and by Vercel for 15 minutes, reducing API quota. Search and age filters are applied to metadata returned from these fixed channels. Main video feed falls back to four older manually selected videos if the API is unavailable. The Shorts feed never fabricates content; it shows an honest unavailable/empty state without a working key.
+
+**Shorts limitation:** The YouTube Data API doesn't directly expose whether the video is formally classified as a YouTube Short. KidLite shows clips up to 180 seconds that the uploader tags `#shorts` or `#ytshorts`. Their vertical aspect ratio and YouTube Shorts classification cannot be proven with standard public Data API metadata. YouTube playback and related content remain controlled by YouTube. Therefore this feature is provisional and not a certification of child safety.
+
+Do not launch the child-directed product broadly until YouTube child-directed API-client designation, privacy compliance, server-enforced Parent PIN and child data controls are complete. `CLERK_SECRET_KEY` is configured but presence alone does not finish backend authentication.

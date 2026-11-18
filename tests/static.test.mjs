@@ -41,20 +41,21 @@ test('Clerk frontend wiring is present and uses the public key config endpoint',
   assert.match(file('public/auth.js'), /session\.getToken/);
 });
 
-test('Kids UI retains six top-aligned category labels and a working settings tab', () => {
+test('Compact top search and 4 tabs stay wired', () => {
   const html = file('public/index.html');
-  for (const category of ['Rhymes', 'Stories', 'Science', 'Shorts', 'Brain Games', 'Offline Play']) {
-    assert.ok(html.includes(category), category);
-  }
+  assert.match(html, /id="search-toggle"/);
+  assert.match(html, /id="notification-toggle"/);
+  assert.match(html, /id="header-search"[^>]*hidden/);
+  assert.match(html, /id="video-query"/);
   assert.match(html, /data-view="settings"/);
+  assert.match(html, /id="offline-ready-indicator"/);
+  assert.doesNotMatch(html, /class="offline-status"/);
   assert.doesNotMatch(html, /id="parent-btn"/);
   assert.match(file('public/styles.css'), /font-family:"Inter"/);
-  assert.match(file('public/styles.css'), /\.category strong\s*\{/);
   assert.match(file('public/app.js'), /function showSettings\(/);
-  assert.match(file('public/app.js'), /showSettings\(\)/);
+  assert.match(file('public/app.js'), /function showShorts\(/);
   assert.ok(existsSync(path.join(root, 'public/icons/kidlite-mark.svg')));
 });
-
 test('Video home and offline grid have separate navigation destinations', () => {
   const html = file('public/index.html');
   assert.match(html, /id="video-feed"/);
@@ -72,6 +73,22 @@ test('Only fixed approved YouTube sources can appear in the server feed', () => 
   assert.match(api, /UCbCmjCuTUZos6Inko4u57UQ/);
   assert.match(api, /UC3KknIJZXRygH2pZ6MDtGbg/);
   assert.match(api, /Invalid filter/);
-  assert.doesNotMatch(api, /fetch\(/);
+  assert.match(api, /YOUTUBE_API_KEY/);
+  assert.match(api, /youtube\/v3/);
+  assert.match(api, /forHandle/);
+  assert.match(api, /#\(\?:shorts/);
   assert.match(file('public/app.js'), /www\.youtube-nocookie\.com\/embed/);
+});
+
+test('Selected Tamil channel handles and server Shorts fetch are present', () => {
+  const html = file('public/index.html');
+  const api = file('api/videos.ts');
+  for (const key of ['chuchutamil','pattampoochi','infobellstamil','shemarootamil','chuttykannamma','kidstvtamil']) {
+    assert.ok(html.includes('data-channel="' + key + '"'), key);
+    assert.ok(api.includes(key), key);
+  }
+  assert.match(api, /playlistItems/);
+  assert.match(api, /contentDetails/);
+  assert.match(file('public/app.js'), /kind:'short'/);
+  assert.match(file('public/app.js'), /kidlite-offline-v6/);
 });

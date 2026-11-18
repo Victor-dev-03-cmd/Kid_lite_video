@@ -10,7 +10,7 @@
   const age = document.getElementById('age-select');
   const channelButtons = [...document.querySelectorAll('[data-channel]')];
   const navButtons = [...document.querySelectorAll('.dock-button')];
-  const state = { channel: 'all', requestNumber: 0, videos: [], timer: null, hasLoaded: false };
+  const state = { channel: 'all', requestNumber: 0, videos: [], shorts: [], timer: null, hasLoaded: false };
 
   function signedIn() { return Boolean(window.KidLiteAuth?.signedIn); }
   function setNav(view) {
@@ -66,7 +66,7 @@
     thumbnail.type = 'button'; thumbnail.className = 'video-thumbnail';
     thumbnail.setAttribute('aria-label', 'Play ' + video.title);
     const image = document.createElement('img');
-    image.src = 'https://i.ytimg.com/vi/' + video.id + '/hqdefault.jpg';
+    image.src = video.thumbnail || ('https://i.ytimg.com/vi/' + video.id + '/hqdefault.jpg');
     image.alt = '';
     image.loading = 'lazy'; image.decoding = 'async'; image.referrerPolicy = 'no-referrer';
     const play = document.createElement('span'); play.className = 'video-play';
@@ -77,7 +77,7 @@
     const details = document.createElement('div'); details.className = 'video-info';
     const avatar = document.createElement('span');
     avatar.className = 'channel-avatar ' + video.channelKey;
-    avatar.textContent = video.channelKey === 'cocomelon' ? '🍉' : '🚂';
+    avatar.textContent = ({cocomelon:'🍉',kidschannel:'🚂',chuchutamil:'🎵',pattampoochi:'🦋',infobellstamil:'🌸',shemarootamil:'📚',chuttykannamma:'🌈',kidstvtamil:'🐥'})[video.channelKey] || '🎬';
     avatar.setAttribute('aria-hidden', 'true');
     const text = document.createElement('div'); text.className = 'video-info-text';
     const title = document.createElement('button'); title.className = 'video-title'; title.type = 'button';
@@ -92,7 +92,7 @@
   }
   function validVideo(v) {
     return v && typeof v.id === 'string' && /^[\w-]{11}$/.test(v.id) &&
-      (v.channelKey === 'cocomelon' || v.channelKey === 'kidschannel') &&
+      ['cocomelon','kidschannel','chuchutamil','pattampoochi','infobellstamil','shemarootamil','chuttykannamma','kidstvtamil'].includes(v.channelKey) &&
       typeof v.title === 'string' && typeof v.channel === 'string';
   }
   async function loadVideos() {
@@ -114,10 +114,8 @@
       videos.forEach(v => fragment.appendChild(videoCard(v)));
       feed.replaceChildren(fragment);
       if (videos.length === 0) {
-        feedStatus.textContent = age.value === '6-9' || age.value === '10-12'
-          ? 'No videos reviewed for this age yet. We only show videos from the two approved channels.'
-          : 'No approved videos match these filters. Try another search.';
-      } else feedStatus.textContent = '';
+        feedStatus.textContent = payload.notice || 'No videos match this age or channel. Try another selection.';
+      } else feedStatus.textContent = payload.mode === 'youtube-live' ? '' : 'Starter videos only. Live Tamil-channel videos require a working YouTube API key.';
     } catch (e) {
       if (requestNumber !== state.requestNumber) return;
       feedStatus.textContent = 'Could not load videos. Check your connection and try again.';
@@ -141,11 +139,11 @@
   });
   age.addEventListener('change', loadVideos);
 
-  function showVideo(video) {
+  function showVideo(video, fromShorts = false) {
     // IDs must come from the server-owned fixed allowlist, never from a URL parameter.
-    if (!validVideo(video) || !state.videos.some(v => v.id === video.id)) return;
-    showActivity('Now Playing', node => {
-      const player = document.createElement('div'); player.className = 'video-player';
+    if (!validVideo(video) || ![...state.videos,...state.shorts].some(v => v.id === video.id)) return;
+    showActivity(fromShorts ? 'Shorts' : 'Now Playing', node => {
+      const player = document.createElement('div'); player.className = fromShorts ? 'video-player short' : 'video-player';
       const frame = document.createElement('iframe');
       frame.src = 'https://www.youtube-nocookie.com/embed/' + video.id + '?rel=0&playsinline=1';
       frame.title = video.title + ' on YouTube';
@@ -157,14 +155,14 @@
       const channel = document.createElement('p'); channel.className = 'player-channel'; channel.textContent = video.channel + ' · YouTube';
       const linkRow = document.createElement('div'); linkRow.className = 'player-links';
       const link = document.createElement('a'); link.className = 'youtube-link';
-      link.href = 'https://www.youtube.com/watch?v=' + video.id;
+      link.href = fromShorts ? 'https://www.youtube.com/shorts/' + video.id : 'https://www.youtube.com/watch?v=' + video.id;
       link.target = '_blank'; link.rel = 'noopener noreferrer';
       link.textContent = 'Open on YouTube ↗';
       linkRow.append(link);
       const note = document.createElement('p'); note.className = 'player-note';
       note.textContent = 'YouTube controls playback and may show ads or related videos. Tap Back to stop this video.';
       node.append(player, heading, channel, linkRow, note);
-    }, 'home', showHome);
+    }, fromShorts ? 'shorts' : 'home', fromShorts ? showShorts : showHome);
   }
 
   function shortSlides(node, title, scenes) {
@@ -209,17 +207,46 @@
       node.appendChild(grid);
     }, 'offline', showHome);
   }
+
   function showShorts() {
     showActivity('Shorts', node => {
-      const empty = document.createElement('div'); empty.className = 'empty-state';
-      const icon = document.createElement('span'); icon.className = 'empty-emoji'; icon.textContent = '🎬';
-      const title = document.createElement('h2'); title.textContent = 'Shorts are next';
-      const p = document.createElement('p'); p.textContent = 'Only parent-selected YouTube Shorts will appear here after review. Try our original offline Mini Shorts now.';
-      const btn = document.createElement('button'); btn.className = 'primary-button'; btn.textContent = 'Offline Mini Shorts';
-      btn.onclick = () => showActivity('Mini Shorts', n => shortSlides(n, 'Mini Shorts', [['🐢','Tilly found a bright leaf.'],['🐞','She shared it with a tiny bug.'],['🌈','They watched a rainbow together!']]), 'offline', showOffline);
-      empty.append(icon, title, p, btn); node.appendChild(empty);
-    }, 'shorts', showHome);
+      const note = document.createElement('p');
+      note.className = 'short-note';
+      note.textContent = 'Tagged #shorts videos from your selected YouTube channels. YouTube controls playback.';
+      const grid = document.createElement('div'); grid.className = 'short-feed';
+      const status = document.createElement('p'); status.className = 'feed-status';
+      status.textContent = 'Fetching Shorts…';
+      node.append(note, grid, status);
+      const params = new URLSearchParams({kind:'short',age:age.value,channel:'all'});
+      fetch('/api/videos?' + params.toString()).then(async response => {
+        if (!response.ok) throw new Error('Shorts API unavailable');
+        return response.json();
+      }).then(data => {
+        const videos = Array.isArray(data.videos) ? data.videos.filter(validVideo) : [];
+        state.shorts = videos;
+        grid.replaceChildren();
+        videos.forEach(video => {
+          const card = document.createElement('article'); card.className = 'short-card';
+          const cover = document.createElement('button'); cover.className = 'short-preview'; cover.type = 'button';
+          cover.setAttribute('aria-label', 'Play ' + video.title);
+          const img = document.createElement('img'); img.loading = 'lazy'; img.alt = '';
+          img.src = video.thumbnail || ('https://i.ytimg.com/vi/' + video.id + '/hqdefault.jpg');
+          const play = document.createElement('span'); play.className = 'video-play';
+          play.setAttribute('aria-hidden', 'true');
+          play.innerHTML = '<svg viewBox="0 0 24 24"><path fill="#fff" d="m7 3 14 9-14 9z"/></svg>';
+          cover.append(img,play); cover.onclick = () => showVideo(video,true);
+          const detail = document.createElement('div');
+          const title = document.createElement('p'); title.className = 'short-title'; title.textContent = video.title;
+          const by = document.createElement('p'); by.className = 'short-channel'; by.textContent = video.channel + ' · YouTube';
+          const button = document.createElement('button'); button.type = 'button'; button.className = 'short-watch';
+          button.textContent = 'Watch Short'; button.onclick = () => showVideo(video,true);
+          detail.append(title,by,button); card.append(cover,detail); grid.append(card);
+        });
+        status.textContent = videos.length ? '' : (data.notice || 'No tagged YouTube Shorts available from selected channels yet.');
+      }).catch(() => {status.textContent = 'Could not load YouTube Shorts. Check API key or network.';});
+    },'shorts',showHome);
   }
+
   function showSettings() {
     showActivity('Settings', node => {
       const root = document.createElement('div'); root.className = 'settings-list';
@@ -279,6 +306,60 @@
     else if (button.dataset.view === 'offline') showOffline();
     else showSettings();
   });
+
+  // Search is opened on demand from the top bar.
+  const searchToggle = document.getElementById('search-toggle');
+  const searchPanel = document.getElementById('header-search');
+  const searchClose = document.getElementById('search-close');
+  const notifyToggle = document.getElementById('notification-toggle');
+  const notifyPanel = document.getElementById('notifications-panel');
+  function setSearch(open) {
+    searchPanel.hidden = !open;
+    searchToggle.setAttribute('aria-expanded',String(open));
+    if(open) {
+      notifyPanel.hidden = true;
+      notifyToggle.setAttribute('aria-expanded','false');
+      search.focus();
+    }
+  }
+  searchToggle.onclick = () => setSearch(searchPanel.hidden);
+  searchClose.onclick = () => setSearch(false);
+  notifyToggle.onclick = () => {
+    const isOpen=notifyPanel.hidden;
+    notifyPanel.hidden = !isOpen;
+    notifyToggle.setAttribute('aria-expanded',String(isOpen));
+    if(isOpen) setSearch(false);
+  };
+  document.addEventListener('keydown', event => {
+    if(event.key==='Escape') {
+      setSearch(false);
+      notifyPanel.hidden=true;
+      notifyToggle.setAttribute('aria-expanded','false');
+    }
+  });
+  // The green indicator means the original offline activity files were cached;
+  // it does NOT imply YouTube works without data.
+  async function updateOfflineReady() {
+    const indicator=document.getElementById('offline-ready-indicator');
+    if(!indicator || !('caches' in window)) return;
+    try {
+      const cache=await caches.open('kidlite-offline-v6');
+      const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
+      const matches=await Promise.all(required.map(path=>cache.match(path)));
+      const ready=matches.every(Boolean);
+      indicator.classList.toggle('hidden',!ready);
+      indicator.hidden=!ready;
+    } catch (_) {
+      indicator.hidden=true;
+      indicator.classList.add('hidden');
+    }
+  }
+  updateOfflineReady();
+  if('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(updateOfflineReady).catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',updateOfflineReady);
+  }
+
   window.KidLiteApp = { showHome, showOffline, showSettings };
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
