@@ -45,3 +45,14 @@ The Clerk Dashboard (for configuring API keys) and the KidLite in-app dashboard 
 
 ### Static frontend + API function routing fix
 The site uses the Vercel **Other** framework preset (`framework: null` in `vercel.json`) so files under `public/` are served by the CDN while `api/config.ts` and `api/health.ts` are dedicated Web API-based Vercel Functions. This prevents conflicts between the Hono preset's route rewriting and the vanilla JavaScript frontend. The remaining Hono modules are a Phase 2 scaffold and not active user-facing endpoints yet.
+
+## Video-first homepage (Phase 1.6)
+
+- Home is a YouTube-style **long-video feed** rather than the six-category grid.
+- Only two channels have been selected: **CoComelon - Nursery Rhymes** (`UCbCmjCuTUZos6Inko4u57UQ`) and **Kids Channel - Cartoon Videos for Kids** (`UC3KknIJZXRygH2pZ6MDtGbg`).
+- `GET /api/videos?age=2-5&channel=cocomelon&kind=video&q=abc` applies **server-side filters** to four fixed, manually selected video IDs. Unknown age/channel/kind values are rejected, with no unrestricted YouTube search or autoplay.
+- Age values are **subjective suggested suitability**, not a YouTube age-certification or a systematic safety assessment. The selected channels primarily publish preschool content; ages 6–9 and 10–12 currently display a truthful empty state until suitable videos are reviewed.
+- YouTube thumbnails are loaded lazily from YouTube. The privacy-enhanced YouTube iframe is instantiated **only after a parent taps a video**, keeping normal player controls, linking to YouTube, and not autoplaying.
+- **Shorts** remain a separate navigation item; live YouTube Shorts are not yet reviewed. The **Offline Play** tab contains the old colorful six-card bento grid plus original local, tap-through mini stories and games. No YouTube content is cached or downloaded.
+- YouTube may show ads, related videos and external links in its embeds. The app cannot technically guarantee ad-free or fully controlled playback.
+- **Before public child-directed launch:** designate the site as child-directed in the applicable Google/YouTube developer tools, review YouTube child-directed policies, check Made For Kids status/embedding permission, obtain legal privacy review, enable and verify Parent PIN and screen-time enforcement, and test with real parents. The current prototype is not a fully audited child-safe product.

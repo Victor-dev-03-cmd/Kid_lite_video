@@ -54,3 +54,24 @@ test('Kids UI retains six top-aligned category labels and a working settings tab
   assert.match(file('public/app.js'), /showSettings\(\)/);
   assert.ok(existsSync(path.join(root, 'public/icons/kidlite-mark.svg')));
 });
+
+test('Video home and offline grid have separate navigation destinations', () => {
+  const html = file('public/index.html');
+  assert.match(html, /id="video-feed"/);
+  assert.match(html, /id="age-select"/);
+  assert.match(html, /id="video-query"/);
+  assert.match(html, /data-channel="cocomelon"/);
+  assert.match(html, /data-channel="kidschannel"/);
+  assert.doesNotMatch(html, /class="categories"/);
+  assert.match(file('public/app.js'), /function showOffline\(/);
+  assert.match(file('public/app.js'), /function showVideo\(/);
+  assert.match(file('public/app.js'), /function showSettings\(/);
+});
+test('Only fixed approved YouTube sources can appear in the server feed', () => {
+  const api = file('api/videos.ts');
+  assert.match(api, /UCbCmjCuTUZos6Inko4u57UQ/);
+  assert.match(api, /UC3KknIJZXRygH2pZ6MDtGbg/);
+  assert.match(api, /Invalid filter/);
+  assert.doesNotMatch(api, /fetch\(/);
+  assert.match(file('public/app.js'), /www\.youtube-nocookie\.com\/embed/);
+});

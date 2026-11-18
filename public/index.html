@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="KidLite — A little place for learning and offline play.">
+  <meta name="description" content="KidLite — Parent-curated videos and offline learning for ages 2–12.">
   <meta name="color-scheme" content="light">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/auth.css">
@@ -19,11 +19,12 @@
 <div id="app">
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/" aria-label="KidLite home"><img src="/icons/kidlite-mark.svg" class="brand-icon" alt="" width="36" height="36"><span class="brand-type">Kid<span class="brand-lite">Lite</span></span></a>
+      <a class="brand" href="/" aria-label="KidLite home">
+        <img src="/icons/kidlite-mark.svg" width="34" height="34" class="brand-icon" alt="">
+        <span class="brand-type">Kid<span class="brand-lite">Lite</span></span>
+      </a>
       <div class="top-status">
-        <span class="status-pill offline-pill" title="Offline story, game and lullaby are available after first visit">
-          <span class="status-dot"></span><span>Offline<br><b>ready</b></span>
-        </span>
+        <span class="offline-status" title="Offline activities work after assets are saved"><span class="status-dot"></span><span>Offline<br><strong>ready</strong></span></span>
         <div id="clerk-user-button" class="hidden" aria-label="Parent account"></div>
         <button class="install-trigger" id="install-btn" type="button" title="Install KidLite" aria-label="Install KidLite">↓</button>
       </div>
@@ -32,66 +33,46 @@
 
   <section id="auth-screen" class="auth-layout" aria-label="Parent login">
     <div class="auth-card">
-      <img class="auth-brand-mark" src="/icons/kidlite-mark.svg" width="48" height="48" alt="">
+      <img class="auth-brand-mark" src="/icons/kidlite-mark.svg" alt="" width="48" height="48">
       <h1>Welcome to KidLite</h1>
       <p class="auth-subtitle">Parent sign in</p>
       <p id="auth-status" class="auth-status" role="status">Loading sign in…</p>
       <div id="clerk-auth-mount"></div>
-      <button id="switch-auth-mode" class="auth-link" type="button">Create an account</button>
+      <button type="button" id="switch-auth-mode" class="auth-link">Create an account</button>
       <div class="auth-separator"><span>or</span></div>
-      <button id="guest-offline" class="guest-button" type="button">✦ Play offline as guest</button>
+      <button type="button" id="guest-offline" class="guest-button">✦ Play offline as guest</button>
     </div>
   </section>
 
   <main id="main-view" class="home-view hidden">
-    <section class="categories" aria-label="Choose an activity">
-      <button type="button" class="category rhymes" data-category="Rhymes" aria-label="Rhymes">
-        <strong>Rhymes</strong><img src="/art/rhymes.svg" alt="" class="category-art" draggable="false">
-      </button>
-      <button type="button" class="category stories" data-category="Stories" aria-label="Stories">
-        <strong>Stories</strong><img src="/art/stories.svg" alt="" class="category-art" draggable="false">
-      </button>
-      <button type="button" class="category science" data-category="Science" aria-label="Science">
-        <strong>Science</strong><img src="/art/science.svg" alt="" class="category-art" draggable="false">
-      </button>
-      <button type="button" class="category shorts" data-category="Shorts" aria-label="Shorts">
-        <strong>Shorts</strong><img src="/art/shorts.svg" alt="" class="category-art" draggable="false">
-      </button>
-      <button type="button" class="category games" data-category="Games" aria-label="Brain Games">
-        <strong>Brain Games</strong><img src="/art/games.svg" alt="" class="category-art" draggable="false">
-      </button>
-      <button type="button" class="category play" data-category="Offline" aria-label="Offline Play">
-        <strong>Offline Play</strong><img src="/art/offline.svg" alt="" class="category-art" draggable="false">
-      </button>
-    </section>
+    <div class="feed-heading">
+      <div><h1>Videos</h1><p>From your selected channels</p></div>
+      <span class="youtube-source" aria-label="Videos sourced from YouTube"><svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="5" fill="#f03c40"/><path d="m10 5 7 4-7 4z" fill="#fff"/></svg>YouTube</span>
+    </div>
+    <div class="feed-tools">
+      <label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.9" cy="10.9" r="6.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input id="video-query" type="search" maxlength="60" placeholder="Search approved videos" aria-label="Search approved videos" autocomplete="off"></label>
+      <label class="age-field"><span class="sr-only">Age range</span><select id="age-select" aria-label="Recommended age"><option value="all">Ages 2–12</option><option value="2-5">Ages 2–5</option><option value="6-9">Ages 6–9</option><option value="10-12">Ages 10–12</option></select></label>
+    </div>
+    <div class="channel-tabs" role="group" aria-label="Channels">
+      <button class="channel-chip selected" type="button" data-channel="all" aria-pressed="true">All</button>
+      <button class="channel-chip" type="button" data-channel="cocomelon" aria-pressed="false">🍉 CoComelon</button>
+      <button class="channel-chip" type="button" data-channel="kidschannel" aria-pressed="false">🚂 Kids Channel</button>
+    </div>
+    <section id="video-feed" class="video-feed" aria-label="Approved YouTube videos" aria-live="polite"></section>
+    <div id="feed-status" class="feed-status" role="status"></div>
+    <p class="feed-disclaimer">Age groups are suggestions, not age certifications. Playback uses YouTube.</p>
   </main>
 
   <section id="activity-view" class="activity-view hidden" aria-live="polite"></section>
 
   <nav class="dock hidden" aria-label="Navigation">
-    <button type="button" class="dock-button active" data-view="home" aria-label="Home" aria-current="page">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10 8.5-7 8.5 7v9.2a1.3 1.3 0 0 1-1.3 1.3h-5.1v-6.3H9.9v6.3H4.8a1.3 1.3 0 0 1-1.3-1.3z"/></svg><span>Home</span>
-    </button>
-    <button type="button" class="dock-button" data-view="shorts" aria-label="Shorts">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m10 8 7 4-7 4z"/></svg><span>Shorts</span>
-    </button>
-    <button type="button" class="dock-button" data-view="offline" aria-label="Offline Play">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.2a14 14 0 0 1 18 0M6.4 13.7a9 9 0 0 1 11.2 0M9.9 17.1a4 4 0 0 1 4.2 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="20" r="1.5"/><path d="M4 4 20 21" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Offline Play</span>
-    </button>
-    <button type="button" class="dock-button" data-view="settings" aria-label="Settings">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10.2 2.6-.6 2.1c-.5.2-1 .4-1.5.7L6 4.4 3.8 6.6l1 2.1c-.3.5-.5 1-.6 1.5l-2.1.6v3.1l2.1.6c.1.5.3 1 .6 1.5l-1 2.1L6 20.4l2.1-1c.5.3 1 .5 1.5.7l.6 2.1h3.1l.6-2.1c.5-.2 1-.4 1.5-.7l2.1 1 2.2-2.2-1-2.1c.3-.5.5-1 .6-1.5l2.1-.6v-3.1l-2.1-.6c-.1-.5-.3-1-.6-1.5l1-2.1-2.2-2.2-2.1 1c-.5-.3-1-.5-1.5-.7l-.6-2.1z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5"/><circle cx="11.75" cy="12.35" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-      <span>Settings</span>
-    </button>
+    <button type="button" class="dock-button active" data-view="home" aria-label="Home" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10 8.5-7 8.5 7v9.2a1.3 1.3 0 0 1-1.3 1.3h-5.1v-6.3H9.9v6.3H4.8a1.3 1.3 0 0 1-1.3-1.3z"/></svg><span>Home</span></button>
+    <button type="button" class="dock-button" data-view="shorts" aria-label="Shorts"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m10 8 7 4-7 4z"/></svg><span>Shorts</span></button>
+    <button type="button" class="dock-button" data-view="offline" aria-label="Offline Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.2a14 14 0 0 1 18 0M6.4 13.7a9 9 0 0 1 11.2 0M9.9 17.1a4 4 0 0 1 4.2 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="20" r="1.5"/><path d="M4 4 20 21" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Offline Play</span></button>
+    <button type="button" class="dock-button" data-view="settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10.2 2.6-.6 2.1c-.5.2-1 .4-1.5.7L6 4.4 3.8 6.6l1 2.1c-.3.5-.5 1-.6 1.5l-2.1.6v3.1l2.1.6c.1.5.3 1 .6 1.5l-1 2.1L6 20.4l2.1-1c.5.3 1 .5 1.5.7l.6 2.1h3.1l.6-2.1c.5-.2 1-.4 1.5-.7l2.1 1 2.2-2.2-1-2.1c.3-.5.5-1 .6-1.5l2.1-.6v-3.1l-2.1-.6c-.1-.5-.3-1-.6-1.5l1-2.1-2.2-2.2-2.1 1c-.5-.3-1-.5-1.5-.7l-.6-2.1z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5"/><circle cx="11.75" cy="12.35" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Settings</span></button>
   </nav>
 </div>
-
-<dialog id="install-dialog" class="install-dialog">
-  <form method="dialog">
-    <h2>Install KidLite</h2>
-    <p id="install-instructions">Add KidLite to your home screen for quick offline play.</p>
-    <button class="primary-button" type="submit">Got it</button>
-  </form>
-</dialog>
+<dialog id="install-dialog" class="install-dialog"><form method="dialog"><h2>Install KidLite</h2><p id="install-instructions">Add KidLite to your home screen for quick offline play.</p><button class="primary-button" type="submit">Got it</button></form></dialog>
 <script defer src="/offline-games.js"></script>
 <script defer src="/app.js"></script>
 <script defer src="/auth.js"></script>
