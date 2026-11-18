@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v10/);
+  assert.match(file('public/app.js'), /kidlite-offline-v11/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -183,7 +183,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v10/);
+  assert.match(worker,/kidlite-offline-v11/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -215,5 +215,35 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v10/);
+  assert.match(app,/kidlite-offline-v11/);
+});
+
+test('First-visit browser install invitation replaces top install button',()=>{
+  const html=file('public/index.html'),js=file('public/install.js');
+  assert.doesNotMatch(html,/id="install-btn"/);
+  assert.match(html,/id="install-dialog"/);
+  assert.match(html,/id="install-action"/);
+  assert.match(html,/id="install-later"/);
+  assert.match(html,/src="\/install\.js"/);
+  assert.match(js,/beforeinstallprompt/);
+  assert.match(js,/appinstalled/);
+  assert.match(js,/display-mode: standalone/);
+  assert.match(js,/display-mode: fullscreen/);
+  assert.match(js,/navigator\.standalone/);
+  assert.match(js,/prompt\.userChoice/);
+  assert.match(js,/Share/);
+});
+test('Shorts retain local seen IDs and page through fresh approved content',()=>{
+  const js=file('public/shorts.js'),api=file('api/videos.ts');
+  assert.match(js,/SEEN_KEY/);
+  assert.match(js,/markShown\(video\.id\)/);
+  assert.match(js,/page:String\(s\.page\)/);
+  assert.match(js,/seen\.has\(v\.id\)/);
+  assert.match(js,/Replay watched Shorts/);
+  assert.match(js,/s\.pendingNext/);
+  assert.match(api,/pageRaw/);
+  assert.match(api,/hasMore/);
+  assert.match(api,/nextPage/);
+  assert.match(api,/perPage=20/);
+  assert.match(api,/s-maxage=180/);
 });

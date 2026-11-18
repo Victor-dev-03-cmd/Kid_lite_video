@@ -108,3 +108,12 @@ Do not launch the child-directed product broadly until YouTube child-directed AP
 - Last saved video titles are viewable without internet but explicitly **not playable** as YouTube video downloads are not allowed without approval; original offline stories/games remain available.
 - Service worker version v10 precaches only first-party app assets, excluding remote video content.
 - See docs/OFFLINE_ARCHITECTURE_V2.md for limits and the rights-cleared media strategy.
+
+## Phase 1.12 — First-visit install and unseen-first Shorts
+
+- Remove the top-bar Download icon **in both normal browser and installed PWA modes**. The first ordinary browser visit shows a centered, dismissible **Add to Home Screen** dialog; subsequent visits do not nag. An explicit Settings entry opens it again when not installed.
+- On Android/compatible browsers the button opens the native `beforeinstallprompt.prompt()` from a user gesture, when available. On iOS Safari there is **no programmatic installation**: the dialog walks the user through Share → Add to Home Screen. Installed PWA modes are detected via display-mode and `navigator.standalone`; invitation is suppressed.
+- Shorts API now supports pagination (`page=0..11`, 20 results per page) using the fixed channel allowlist, with recent Tamil videos sorted first. The client fetches additional **metadata pages** as the user approaches the end, not additional iframe players. The currently displayed Shorts are remembered as a bounded set of local video IDs (last 600, stored on-device only), and skipped across sessions. A clip is marked as shown when it is rendered; playback completion cannot be observed reliably through a cross-origin iframe.
+- When the approved-source pool is exhausted, the app shows a caught-up message and offers **explicit replay**, not an automatic loop. There cannot be an infinite supply of genuinely new videos if the approved channels have no new uploads; the API freshness depends on YouTube and cache TTL.
+- User-requested swipe **beginning on top of a YouTube iframe** cannot be captured cross-origin. We preserve the native YouTube player surface, ads, attribution and controls rather than overlaying a transparent gesture-capture layer. Gestures work on the app-owned edge and letterbox regions. Truly native full-video swipe would require the official YouTube Shorts experience or rights-cleared self-hosted videos.
+- This is a code-level improvement; mobile touch UX, browser installation variations and video pagination still require device E2E testing.

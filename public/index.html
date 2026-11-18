@@ -29,7 +29,6 @@
         <button type="button" class="top-icon" id="search-toggle" title="Search" aria-label="Open search" aria-expanded="false" aria-controls="header-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         <button type="button" class="top-icon" id="notification-toggle" title="Notifications" aria-label="Notifications" aria-expanded="false" aria-controls="notifications-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div id="clerk-user-button" class="hidden" aria-label="Parent account"></div>
-        <button class="install-trigger" id="install-btn" type="button" title="Install KidLite" aria-label="Install KidLite">↓</button>
       </div>
     </div>
     <div id="header-search" class="header-panel" hidden>
@@ -79,10 +78,19 @@
     <button type="button" class="dock-button" data-view="settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10.2 2.6-.6 2.1c-.5.2-1 .4-1.5.7L6 4.4 3.8 6.6l1 2.1c-.3.5-.5 1-.6 1.5l-2.1.6v3.1l2.1.6c.1.5.3 1 .6 1.5l-1 2.1L6 20.4l2.1-1c.5.3 1 .5 1.5.7l.6 2.1h3.1l.6-2.1c.5-.2 1-.4 1.5-.7l2.1 1 2.2-2.2-1-2.1c.3-.5.5-1 .6-1.5l2.1-.6v-3.1l-2.1-.6c-.1-.5-.3-1-.6-1.5l1-2.1-2.2-2.2-2.1 1c-.5-.3-1-.5-1.5-.7l-.6-2.1z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5"/><circle cx="11.75" cy="12.35" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Settings</span></button>
   </nav>
 </div>
-<dialog id="install-dialog" class="install-dialog"><form method="dialog"><h2>Install KidLite</h2><p id="install-instructions">Add KidLite to your home screen for quick offline play.</p><button class="primary-button" type="submit">Got it</button></form></dialog>
+<dialog id="install-dialog" class="install-dialog" aria-labelledby="install-heading">
+  <div class="install-content">
+    <img src="/icons/kidlite-mark.svg" width="64" height="64" alt="" class="install-mark">
+    <h2 id="install-heading">Add KidLite to Home Screen</h2>
+    <p id="install-instructions">Save KidLite for quick access to original offline stories and games.</p>
+    <button type="button" class="primary-button install-action" id="install-action">Add to Home Screen</button>
+    <button type="button" class="install-later" id="install-later">Not now</button>
+  </div>
+</dialog>
 <script defer src="/offline-games.js"></script>
 <script defer src="/catalogue.js"></script>
 <script defer src="/shorts.js"></script>
+<script defer src="/install.js"></script>
 <script defer src="/app.js"></script>
 <script defer src="/auth.js"></script>
 </body>

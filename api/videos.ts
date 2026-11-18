@@ -77,8 +77,11 @@ export async function GET(request:Request) {
   const age=url.searchParams.get('age')||'all';
   const channel=url.searchParams.get('channel')||'all';
   const kind=url.searchParams.get('kind')||'video';
+  const pageRaw=url.searchParams.get('page')||'0';
+  const page=Number(pageRaw);
   const q=(url.searchParams.get('q')||'').trim().slice(0,60).toLocaleLowerCase();
-  if(!ALLOWED_AGES.includes(age)||!['all','tamil',...Object.keys(CHANNELS)].includes(channel)||!['video','short'].includes(kind)) {
+  if(!ALLOWED_AGES.includes(age)||!['all','tamil',...Object.keys(CHANNELS)].includes(channel)||!['video','short'].includes(kind)||
+    !/^\d{1,2}$/.test(pageRaw)||!Number.isInteger(page)||page>11 || (kind==='video'&&page!==0)) {
     return Response.json({error:'Invalid filter'}, {status:400,headers:{'Cache-Control':'no-store'}});
   }
   const apiKey=process.env.YOUTUBE_API_KEY?.trim();
@@ -122,16 +125,22 @@ export async function GET(request:Request) {
   if(channel==='all') {
     const tamil=videos.filter(v=>TAMIL_KEYS.includes(v.channelKey));
     const other=videos.filter(v=>!TAMIL_KEYS.includes(v.channelKey));
-    videos=[...recentBalanced(tamil,36),...recentBalanced(other,9)];
+    videos=kind==='short'
+      ? [...recentBalanced(tamil,160),...recentBalanced(other,60)]
+      : [...recentBalanced(tamil,36),...recentBalanced(other,9)];
   } else {
-    videos=recentBalanced(videos,kind==='short'?30:45);
+    videos=recentBalanced(videos,kind==='short'?160:45);
   }
-  // Shorts are displayed one at a time; bound response size for quick mobile loading.
-  if(kind==='short') videos=videos.slice(0,30);
+  // Efficient metadata pagination: no client can pull unlimited records in one response.
+  const total=videos.length;
+  const perPage=20;
+  if(kind==='short')videos=videos.slice(page*perPage,(page+1)*perPage);
+  const hasMore=kind==='short'&&((page+1)*perPage<total)&&page<11;
   const exposed=Object.fromEntries(Object.entries(CHANNELS).map(([k,v])=>[k,{title:v.title,emoji:v.emoji,handle:v.handle||null}]));
   return Response.json({videos,channels:exposed,mode,notice,ageLabel:'Suggested suitability only (not verified age-rated content)',
     shortClassification:'Videos tagged #shorts and at most 180 seconds. The Data API cannot verify aspect ratio or official Shorts classification.',
-    source:'YouTube Data API v3',curatedChannels:true},{
-    headers:{'Cache-Control':mode==='youtube-live'?'public, s-maxage=900, stale-while-revalidate=600':'no-store'}
+    source:'YouTube Data API v3',curatedChannels:true,
+    page:kind==='short'?page:0,hasMore,nextPage:hasMore?page+1:null},{
+    headers:{'Cache-Control':mode==='youtube-live'?(kind==='short'?'public, s-maxage=180, stale-while-revalidate=120':'public, s-maxage=900, stale-while-revalidate=600'):'no-store'}
   });
 }

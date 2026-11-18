@@ -5,7 +5,18 @@
   const approved = new Set(['chuchutamil','pattampoochi','infobellstamil',
     'shemarootamil','chuttykannamma','kidstvtamil','cocomelon','kidschannel']);
   let active = null;
-  const responseCache = new Map();
+  const SEEN_KEY='kidlite.shorts.shown.v1';
+  function seenHistory(){
+    try{
+      const a=JSON.parse(localStorage.getItem(SEEN_KEY)||'[]');
+      return Array.isArray(a)?a.filter(id=>typeof id==='string'&&/^[\w-]{11}$/.test(id)).slice(-600):[];
+    }catch(_){return [];}
+  }
+  function markShown(id){
+    const items=seenHistory().filter(x=>x!==id);
+    items.push(id);
+    try{localStorage.setItem(SEEN_KEY,JSON.stringify(items.slice(-600)));}catch(_){}
+  }
 
   function valid(v) {
     return v && /^[\w-]{11}$/.test(v.id || '') &&
@@ -30,13 +41,16 @@
     if (active && active.enteredFullscreen && !document.fullscreenElement) close();
   }
   function navigate(delta) {
-    const s = active;
-    if (!s || s.items.length === 0 || Date.now() - s.lastSwitch < 300) return;
-    const next = Math.max(0,Math.min(s.items.length - 1,s.index + delta));
-    if (next === s.index) return;
-    s.lastSwitch = Date.now();
-    s.index = next;
-    render();
+    const s=active;
+    if(!s||!s.items.length||Date.now()-s.lastSwitch<300)return;
+    const next=s.index+delta;
+    if(next>=0&&next<s.items.length){
+      s.lastSwitch=Date.now();s.index=next;render();
+    }else if(delta>0&&s.hasMore){
+      s.pendingNext=true;loadNext(s);
+    }else if(delta>0){
+      caughtUp(s);
+    }
   }
   function onKeyDown(event) {
     if (!active || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -116,6 +130,8 @@
     s.slot.append(player);
     s.description.textContent = (s.index + 1) + ' of ' +
       s.items.length + ' — ' + video.title + ' — ' + video.channel;
+    markShown(video.id);
+    if(s.hasMore && s.items.length-s.index<=4)loadNext(s);
   }
   function showMessage(s, message, retry = false) {
     s.slot.replaceChildren();
@@ -128,38 +144,69 @@
       button.className = 'shorts-retry';
       button.type = 'button';
       button.textContent = 'Retry';
-      button.onclick = () => load(s);
+      button.onclick = () => loadNext(s);
       panel.append(button);
     }
     s.slot.append(panel);
     s.description.textContent = message;
   }
-  async function load(s) {
-    s.controller.abort();
-    s.controller = new AbortController();
-    showMessage(s,'Loading Shorts…');
-    try {
-      const cache = responseCache.get(s.age);
-      let payload;
-      if (cache && Date.now() < cache.expires) payload = cache.data;
-      else {
-        const params = new URLSearchParams({kind:'short',channel:'all',age:s.age});
-        const response = await fetch('/api/videos?' + params,{
-          signal:s.controller.signal,cache:'default'
-        });
-        if (!response.ok) throw Error('Shorts API unavailable');
-        payload = await response.json();
-        responseCache.set(s.age,{data:payload,expires:Date.now()+180000});
-      }
-      if (active !== s) return;
-      s.items = Array.isArray(payload.videos) ? payload.videos.filter(valid).slice(0,30) : [];
-      s.index = 0; s.lastSwitch = 0;
-      if (s.items.length) render();
-      else showMessage(s,payload.notice || 'No Shorts available from selected channels.',true);
-    } catch (error) {
-      if (active !== s || error?.name === 'AbortError') return;
-      showMessage(s,'YouTube Shorts need an internet connection. Offline stories are available in Offline Play.',true);
+  function caughtUp(s){
+    if(active!==s)return;
+    s.pendingNext=false;
+    showMessage(s,'All currently available Shorts have been shown. Check back when these channels upload new clips.',true);
+    const button=s.slot.querySelector('.shorts-retry');
+    if(button){
+      button.textContent='Replay watched Shorts';
+      button.onclick=()=>{
+        try{localStorage.removeItem(SEEN_KEY);}catch(_){}
+        s.controller.abort();s.controller=new AbortController();
+        s.items=[];s.ids=new Set();s.page=0;s.index=0;
+        s.hasMore=true;s.loading=null;s.pendingNext=false;s.lastSwitch=0;
+        showMessage(s,'Loading Shorts…');loadNext(s);
+      };
     }
+  }
+  async function loadNext(s){
+    if(active!==s||s.loading)return s.loading;
+    if(!s.hasMore){if(!s.items.length||s.pendingNext)caughtUp(s);return;}
+    s.loading=(async()=>{
+      try{
+        let added=0;
+        // Look ahead through approved batches without recycling already shown IDs.
+        while(active===s&&s.hasMore&&added===0){
+          const params=new URLSearchParams({
+            kind:'short',channel:'all',age:s.age,page:String(s.page)
+          });
+          const response=await fetch('/api/videos?'+params,{
+            signal:s.controller.signal,cache:'default'
+          });
+          if(!response.ok)throw Error('Shorts API unavailable');
+          const data=await response.json();
+          if(active!==s)return;
+          const seen=new Set(seenHistory());
+          for(const v of Array.isArray(data.videos)?data.videos:[]){
+            if(!valid(v)||seen.has(v.id)||s.ids.has(v.id))continue;
+            s.ids.add(v.id);s.items.push(v);added++;
+          }
+          s.page=Number.isInteger(data.nextPage)?data.nextPage:s.page+1;
+          s.hasMore=Boolean(data.hasMore)&&s.page<=11;
+        }
+        if(active!==s)return;
+        if(!s.items.length){caughtUp(s);return;}
+        if(s.index===0&&!s.slot.querySelector('iframe')){render();return;}
+        if(s.pendingNext){
+          s.pendingNext=false;
+          if(s.index+1<s.items.length){
+            s.lastSwitch=Date.now();s.index++;render();
+          }else if(!s.hasMore)caughtUp(s);
+        }
+      }catch(error){
+        if(active!==s||error?.name==='AbortError')return;
+        if(!s.items.length)showMessage(s,'Could not fetch Shorts. Connect to the internet and retry.',true);
+        else s.description.textContent='More Shorts are temporarily unavailable.';
+      }finally{if(active===s)s.loading=null;}
+    })();
+    return s.loading;
   }
   function open(options={}) {
     if (active) return;
@@ -205,7 +252,8 @@
     overlay.append(stage,back,description);
     const age=['all','2-5','6-9','10-12'].includes(options.age)?options.age:'all';
     const s={overlay,slot,description,age,controller:new AbortController(),
-      items:[],index:0,lastSwitch:0,onExit:options.onExit,enteredFullscreen:false};
+      items:[],ids:new Set(),index:0,page:0,hasMore:true,loading:null,pendingNext:false,
+      lastSwitch:0,onExit:options.onExit,enteredFullscreen:false};
     active=s;
     let lastWheel=0;
     overlay.addEventListener('wheel',event=>{
@@ -228,7 +276,8 @@
         }).catch(()=>{});
       } catch (_) {}
     }
-    load(s);
+    showMessage(s,'Loading fresh Shorts…');
+    loadNext(s);
   }
   window.KidLiteShorts={open,close,get isOpen(){return !!active;}};
 })();

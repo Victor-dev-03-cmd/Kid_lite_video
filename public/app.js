@@ -467,7 +467,9 @@
       });
       item(general,'📚','Offline Play','Stories, mini shorts and games',showOffline);
       item(general,'📋','Saved video titles','Lightweight offline catalogue',showSavedCatalogue);
-      item(general,'↓','Install KidLite','Save to home screen',() => document.getElementById('install-btn').click());
+      if (!window.KidLiteInstall?.installed) {
+        item(general,'📲','Install KidLite','Add to Home Screen',() => window.KidLiteInstall?.open());
+      }
       const channelSection = section('Your selected channels');
       item(channelSection,'🍉','CoComelon','Parent selected',null,true);
       item(channelSection,'🚂','Kids Channel','Parent selected',null,true);
@@ -535,7 +537,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v10');
+      const cache=await caches.open('kidlite-offline-v11');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);
@@ -556,15 +558,4 @@
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
   }
-  let prompt;
-  window.addEventListener('beforeinstallprompt', event => {event.preventDefault(); prompt = event;});
-  function onIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;}
-  document.getElementById('install-btn').onclick = () => {
-    if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) return;
-    if (prompt) {prompt.prompt(); prompt = null; return;}
-    document.getElementById('install-instructions').textContent = onIOS()
-      ? 'In Safari, tap Share, then Add to Home Screen.'
-      : 'In your browser menu, choose Install app or Add to Home Screen.';
-    document.getElementById('install-dialog').showModal();
-  };
 })();
