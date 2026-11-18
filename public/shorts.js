@@ -94,6 +94,9 @@
     s.playerReady=false;
     clearTimeout(s.apiWatchdog);
     s.frame.src=youtubeEmbed(s.requestedId||s.initialId,true);
+    // When the API cannot handle autoplay, allow the child to use the native
+    // fallback controls rather than trapping playback behind the swipe layer.
+    if(s.swipeSurface)s.swipeSurface.style.pointerEvents='none';
     refreshPauseButton(s);
     s.description.textContent='Native YouTube playback controls are available.';
   }
@@ -120,6 +123,7 @@
             onReady:event=>{
               if(active!==s)return;
               s.player=event.target;s.playerReady=true;s.playerFailed=false;
+              if(s.swipeSurface)s.swipeSurface.style.pointerEvents='auto';
               clearTimeout(s.apiWatchdog);
               refreshPauseButton(s);
               if(s.requestedId!==s.initialId && typeof s.player.loadVideoById==='function'){
@@ -252,6 +256,7 @@
   function render(){
     const s=active;
     if(!s||!s.items.length)return;
+    if(s.swipeSurface)s.swipeSurface.style.pointerEvents=s.playerFailed?'none':'auto';
     const video=s.items[s.index];
     prepareNear(s);
     s.lastVideoSwitchAt=Date.now();
@@ -293,6 +298,8 @@
     if(s.hasMore && s.items.length-s.index<=4)loadNext(s);
   }
   function showMessage(s, message, retry = false) {
+    // Let the user tap Retry / Replay when a clip is unavailable or exhausted.
+    if(s.swipeSurface)s.swipeSurface.style.pointerEvents=retry?'none':'auto';
     disposePlayer(s);
     s.holder=null;
     if(s.pauseButton)s.pauseButton.hidden=true;
@@ -419,11 +426,54 @@
         // Only vertical swipes navigate Shorts.
       },{passive:true});
     }
+    // Kids-first fullscreen gesture surface: a vertical swipe can begin
+    // anywhere over the visible Short. Tapping is intentionally a no-op.
+    const swipeSurface=document.createElement('div');
+    swipeSurface.className='shorts-full-swipe-surface';
+    swipeSurface.setAttribute('role','region');
+    swipeSurface.setAttribute('aria-label','Swipe up for next Short, down for previous Short');
+    const gesture={pointerId:null,startX:0,startY:0};
+    swipeSurface.addEventListener('pointerdown',event=>{
+      if(event.isPrimary===false)return;
+      gesture.pointerId=event.pointerId;
+      gesture.startX=event.clientX;
+      gesture.startY=event.clientY;
+      try{swipeSurface.setPointerCapture(event.pointerId);}catch(_){}
+    });
+    swipeSurface.addEventListener('pointerup',event=>{
+      if(gesture.pointerId!==event.pointerId)return;
+      const dy=event.clientY-gesture.startY;
+      const dx=event.clientX-gesture.startX;
+      gesture.pointerId=null;
+      if(Math.abs(dy)>=40 && Math.abs(dy)>Math.abs(dx)*1.2){
+        navigate(dy<0?1:-1);
+      }
+    });
+    swipeSurface.addEventListener('pointercancel',()=>{gesture.pointerId=null;});
+    // Legacy Safari fallback only when Pointer Events are unavailable.
+    if(!('PointerEvent' in window)){
+      let first=null;
+      swipeSurface.addEventListener('touchstart',event=>{
+        if(event.touches.length===1){
+          first={x:event.touches[0].clientX,y:event.touches[0].clientY};
+        }
+      },{passive:true});
+      swipeSurface.addEventListener('touchend',event=>{
+        if(!first || !event.changedTouches.length)return;
+        const dy=event.changedTouches[0].clientY-first.y;
+        const dx=event.changedTouches[0].clientX-first.x;
+        first=null;
+        if(Math.abs(dy)>=40 && Math.abs(dy)>Math.abs(dx)*1.2){
+          navigate(dy<0?1:-1);
+        }
+      },{passive:true});
+      swipeSurface.addEventListener('touchcancel',()=>{first=null;},{passive:true});
+    }
     const description=document.createElement('p');
     description.className='sr-only';description.setAttribute('aria-live','polite');
-    overlay.append(stage,back,description);
+    overlay.append(stage,swipeSurface,back,description);
     const age=['all','2-5','6-9','10-12'].includes(options.age)?options.age:'all';
-    const s={overlay,slot,description,age,controller:new AbortController(),
+    const s={overlay,slot,description,swipeSurface,age,controller:new AbortController(),
       items:[],ids:new Set(),index:0,page:0,hasMore:true,loading:null,pendingNext:false,
       lastSwitch:0,onExit:options.onExit,enteredFullscreen:false,
       player:null,frame:null,holder:null,playerReady:false,playerPending:false,

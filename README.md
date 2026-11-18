@@ -170,3 +170,12 @@ Their source IDs/handles are fixed server-side, never user-supplied to the YouTu
 - **Shorts:** Removed previous 9:16 artificial box-size limits; the official privacy-enhanced YouTube iframe now fills the full available portrait viewport between narrow gesture margins. The YouTube video inside may still letterbox depending on source aspect ratio, which cannot lawfully be cropped or stretched.
 - Shorts is now swipe-centric: removed the extra app Play/Pause widget and tap-to-pause border actions. In case autoplay fails, revert to official YouTube controls rather than leaving the child with an unplayable video. Swipe start on the cross-origin YouTube player is **not intercepted**; blocking it with a transparent touch shield would interfere with YouTube player functionality.
 - Offline shell service-worker cache version v16. Build and mobile-browser responsiveness must be verified for true device-specific fullscreen orientation.
+
+## Phase 1.18 — Pinned All tab, pull refresh and kid-first Shorts swipe
+
+- **All is permanently first:** selected dark/black chip stays fixed at the start of the channel row, while Tamil, Bumble Zoop, Bachpan Ki Duniya, Bibo Toys and the other channels scroll separately to its right.
+- **No Refresh button:** the circular icon is removed. Pull down more than 95px while Home is at the top to reseed and refresh the existing approved metadata feed. CDN/YouTube quota behavior remains unchanged.
+- **Kids gesture experiment:** Shorts adds a transparent fullscreen swipe-detection region so a vertical drag of at least 40px starting over any part of the video goes to the next/previous approved Short. No play/pause control is added. The Back button remains above the touch surface. When YouTube autoplay/JS API fails, the region yields pointer interaction to native player controls; Replay/Retry is also reachable.
+- **YouTube compliance warning:** this experimental gesture surface intercepts taps/gestures intended for YouTube's embedded player, including possible advertising/attribution interactions, and is **likely inconsistent** with YouTube API Services embedded-player interaction requirements. Do not consider this production-compliant without written approval from YouTube or a switch to rights-cleared, native KidLite video files. There is a risk of player/API restriction.
+- This is code and endpoint validation, not a successful real-device swipe test. The gesture layer may behave differently on iOS Safari and Android browsers.
+- Service Worker cache v17.

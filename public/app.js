@@ -16,7 +16,6 @@
   };
   const FEED_CHUNK = 7;
   const freshness = window.KidLiteFreshness;
-  const refreshButton = document.getElementById('feed-refresh');
   state.feedSeed = freshness?.createSeed() || Date.now();
   state.lastRefreshAt = 0;
   function shuffledVideos(videos) {
@@ -251,13 +250,11 @@
     state.lastRefreshAt=now;
     // New shuffle seed is local, not an API query parameter, preserving CDN/quota.
     state.feedSeed=freshness?.createSeed() || now;
-    if(refreshButton)refreshButton.classList.add('refreshing');
     window.scrollTo({top:0,behavior:'instant'});
-    loadVideos({force:true}).finally(()=>{
-      refreshButton?.classList.remove('refreshing');
-    });
+    // Mobile top-of-feed pull refreshes the metadata and creates a new shuffle seed.
+    // No visible Refresh button is needed.
+    loadVideos({force:true});
   }
-  if(refreshButton)refreshButton.onclick=refreshFeed;
   // Native pull gestures are observed passively; no interception of scrolling.
   let feedPullStart=null;
   home.addEventListener('touchstart',event=>{
@@ -733,7 +730,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v16');
+      const cache=await caches.open('kidlite-offline-v17');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

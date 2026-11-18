@@ -317,18 +317,12 @@ html{overscroll-behavior-y:auto}
 .shorts-pause-toggle:focus-visible{outline:3px solid #b69cff;outline-offset:2px}
 
 
-/* Smart Feed Freshness: keep channel tabs prominent and refresh control reachable. */
-.channel-tabs-shell{width:100%;display:flex;align-items:flex-start;gap:7px;margin:1px 0 13px}
+/* Keep All permanently first while other channel chips scroll independently. */
+.channel-tabs-shell{width:100%;display:flex;align-items:flex-start;gap:8px;margin:1px 0 13px}
+.channel-tabs-shell .pinned-all-chip{flex:0 0 auto;position:relative;z-index:1;margin:0}
 .channel-tabs-shell .channel-tabs{flex:1;min-width:0;margin:0;scroll-padding-inline:8px;padding-bottom:8px}
-.feed-refresh-button{display:grid;place-items:center;flex:0 0 40px;width:40px;height:39px;margin:1px 0 0;border-radius:11px;border:1px solid #dedbe9;background:#f5f2fc;color:#7258b6;cursor:pointer}
-.feed-refresh-button svg{width:20px;height:20px;transition:transform .3s ease}
-.feed-refresh-button:focus-visible{outline:3px solid #9575db;outline-offset:2px}
-.feed-refresh-button:active{background:#ede5ff}
-.feed-refresh-button.refreshing svg{animation:kidlite-rotate 1s linear infinite}
-@keyframes kidlite-rotate{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.feed-refresh-button.refreshing svg{animation:none}}
+.channel-chip.selected,.channel-chip.selected.pinned-all-chip{background:#111116;color:#fff;border-color:#111116}
 html:has(.home-view:not(.hidden)){overscroll-behavior-y:contain}
-
 
 /* Phase 1.17: use the FULL expanded viewport, not a centred 16:9 thumbnail.
    YouTube itself handles letterboxing within the official player; no cropping. */
@@ -476,3 +470,37 @@ html:has(.home-view:not(.hidden)){overscroll-behavior-y:contain}
   .shorts-stage{padding:0!important;gap:0!important}
   .shorts-video-slot .shorts-player{height:100%!important;width:100%!important;max-width:none!important}
 }
+
+/* Kids-first swipe: full-screen touch navigation over the currently playing Short.
+   The video remains visible. Any tap is ignored; vertical 40px drag changes clip.
+   Back remains above this touch surface. Native fallback can disable this surface. */
+.shorts-full-swipe-surface{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:6;
+  background:transparent;
+  touch-action:none;
+  overscroll-behavior:contain;
+  -webkit-user-select:none;
+  user-select:none;
+  cursor:ns-resize;
+}
+.shorts-back{z-index:8!important}
+/* Gesture rails are fallback-only; they no longer consume visible video width. */
+.shorts-stage>.shorts-swipe-rail{
+  position:absolute!important;
+  z-index:3;
+  top:0;
+  bottom:0;
+  flex:none!important;
+  width:18px!important;
+  min-width:0!important;
+  height:100%;
+  background:transparent!important;
+}
+.shorts-stage>.shorts-rail-left{left:0}
+.shorts-stage>.shorts-rail-right{right:0}
+.shorts-video-slot{width:100%!important;flex:1 1 100%!important}
+.shorts-video-slot .shorts-player{width:100%!important}

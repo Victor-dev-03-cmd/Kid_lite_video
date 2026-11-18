@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v16/);
+  assert.match(file('public/app.js'), /kidlite-offline-v17/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -184,7 +184,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v16/);
+  assert.match(worker,/kidlite-offline-v17/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -216,7 +216,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v16/);
+  assert.match(app,/kidlite-offline-v17/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -368,7 +368,7 @@ test('Browser seed and watched-video history shuffle unseen videos first',()=>{
 });
 test('Refresh uses fresh local seed without duplicating YouTube provider calls',()=>{
   const html=file('public/index.html'),app=file('public/app.js'),shorts=file('public/shorts.js');
-  assert.match(html,/id="feed-refresh"/);
+  assert.doesNotMatch(html,/id="feed-refresh"/);
   assert.match(html,/src="\/freshness\.js"/);
   assert.match(app,/function refreshFeed\(\)/);
   assert.match(app,/loadVideos\(\{force:true\}\)/);
@@ -379,7 +379,7 @@ test('Refresh uses fresh local seed without duplicating YouTube provider calls',
   assert.match(shorts,/sessionSeed:/);
   const sw=file('public/sw.js');
   assert.match(sw,/\/freshness\.js/);
-  assert.match(sw,/kidlite-offline-v16/);
+  assert.match(sw,/kidlite-offline-v17/);
 });
 
 test('Expanded long videos fill the viewport and keep four in-app suggestions',()=>{
@@ -409,4 +409,41 @@ test('Shorts player fills device height without cropping YouTube or covering its
   assert.doesNotMatch(js,/touch-shield|gesture-overlay/);
   assert.match(js,/onAutoplayBlocked/);
   assert.match(js,/activateNativeControls\(s\)/);
+});
+
+test('All is pinned permanently first in black; other channel chips can scroll',()=>{
+  const html=file('public/index.html'),css=file('public/styles.css');
+  const shell=html.indexOf('class="channel-tabs-shell"');
+  const all=html.indexOf('data-channel="all"',shell);
+  const tabs=html.indexOf('class="channel-tabs"',shell);
+  const tamil=html.indexOf('data-channel="tamil"',shell);
+  assert.ok(shell>=0 && all>shell && tabs>all && tamil>tabs);
+  assert.match(html,/class="channel-chip selected pinned-all-chip"/);
+  assert.match(css,/\.channel-tabs-shell \.pinned-all-chip/);
+  assert.match(css,/background:#111116/);
+});
+test('Pull to refresh still reseeds the feed with no visible Refresh button',()=>{
+  const app=file('public/app.js'),html=file('public/index.html');
+  assert.doesNotMatch(html,/id="feed-refresh"|class="feed-refresh-button"/);
+  assert.doesNotMatch(app,/refreshButton/);
+  assert.match(app,/function refreshFeed\(\)/);
+  assert.match(app,/state\.feedSeed=freshness\?\.createSeed\(\)/);
+  assert.match(app,/home\.addEventListener\('touchstart'/);
+  assert.match(app,/home\.addEventListener\('touchend'/);
+  assert.match(app,/dy>95/);
+  assert.match(app,/loadVideos\(\{force:true\}\)/);
+});
+test('Full-viewport Shorts gesture layer captures swipes from anywhere',()=>{
+  const js=file('public/shorts.js'),css=file('public/styles.css');
+  assert.match(js,/className='shorts-full-swipe-surface'/);
+  assert.match(js,/overlay\.append\(stage,swipeSurface,back,description\)/);
+  assert.match(js,/swipeSurface\.addEventListener\('pointerdown'/);
+  assert.match(js,/swipeSurface\.addEventListener\('pointerup'/);
+  assert.match(js,/Math\.abs\(dy\)>=40/);
+  assert.match(js,/navigate\(dy<0\?1:-1\)/);
+  assert.match(js,/pointerEvents=retry\?'none':'auto'/);
+  assert.match(js,/s\.swipeSurface\.style\.pointerEvents='none'/);
+  assert.match(css,/\.shorts-full-swipe-surface\{/);
+  assert.match(css,/touch-action:none/);
+  assert.match(css,/\.shorts-back\{z-index:8!important\}/);
 });
