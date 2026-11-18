@@ -35,3 +35,10 @@ The Vanilla JavaScript frontend now supports Clerk **Sign in / Create account** 
 5. The client SDK is loaded from the Clerk domain encoded in your publishable key. The backend exposes only the publishable key via `/api/config`. Keep every secret server-only.
 
 The Clerk Dashboard (for configuring API keys) and the KidLite in-app dashboard are separate.
+
+### Vercel routing and Node ESM fix
+
+- Node's native ESM loader requires `.js` extensions on relative imports in emitted JavaScript. All TypeScript imports use those extensions, while TypeScript resolves corresponding `.ts` sources through `NodeNext`.
+- The public index is deployed at `/index.html`. The root `/` uses a redirect to that static file to avoid sending the homepage to the Hono function. Vercel Hono routing automatically handles `/api/*`.
+- Node.js is pinned to major 24 for predictable runtime behavior.
+- Set `CLERK_PUBLISHABLE_KEY` (not `VITE_CLERK_PUBLISHABLE_KEY`) in the Vercel production environment.

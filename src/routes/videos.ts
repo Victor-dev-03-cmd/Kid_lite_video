@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { getAuth } from '@hono/clerk-auth'
-import { youtubeSearchUrl } from '../services/youtube'
+import { youtubeSearchUrl } from '../services/youtube.js'
 
 export const videoRoutes = new Hono()
 videoRoutes.get('/', (c) => {

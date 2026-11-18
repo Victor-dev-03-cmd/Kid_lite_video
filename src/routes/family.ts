@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { getAuth } from '@hono/clerk-auth'
-import { getDatabase } from '../services/supabase'
+import { getDatabase } from '../services/supabase.js'
 
 export const familyRoutes = new Hono()
 

@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { clerkMiddleware } from '@hono/clerk-auth'
-import { familyRoutes } from './routes/family'
-import { videoRoutes } from './routes/videos'
-import { channelRoutes } from './routes/channels'
-import { screenTimeRoutes } from './routes/screentime'
+import { familyRoutes } from './routes/family.js'
+import { videoRoutes } from './routes/videos.js'
+import { channelRoutes } from './routes/channels.js'
+import { screenTimeRoutes } from './routes/screentime.js'
 
 const app = new Hono()
 app.get('/api/health', (c) => c.json({ service: 'KidLite API', status: 'ok', phase: 1 }))
