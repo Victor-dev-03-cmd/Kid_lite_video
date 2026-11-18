@@ -159,9 +159,11 @@
       item(general, '↓', 'Install KidLite', 'Add to home screen', () => document.getElementById('install-btn').click());
       caption('Preferences');
       const prefs = group();
-      const motionRow = item(prefs, '✨', 'Reduce motion', 'Simpler animations', null);
-      const end = motionRow.lastElementChild;
-      end.remove();
+      const motionButton = item(prefs, '✨', 'Reduce motion', 'Simpler animations', null);
+      const motionRow = document.createElement('label');
+      motionRow.className = 'settings-row';
+      motionRow.append(motionButton.firstElementChild, motionButton.firstElementChild);
+      motionButton.replaceWith(motionRow);
       const toggle = document.createElement('input');
       toggle.type = 'checkbox';
       toggle.className = 'settings-switch';
@@ -173,11 +175,6 @@
       toggle.onchange = () => {
         document.documentElement.classList.toggle('reduce-motion', toggle.checked);
         try { localStorage.setItem('kidlite.reduceMotion', toggle.checked ? '1' : '0'); } catch (_) {}
-      };
-      motionRow.onclick = event => {
-        if (event.target === toggle) return;
-        toggle.checked = !toggle.checked;
-        toggle.onchange();
       };
       motionRow.appendChild(toggle);
       caption('Parent');
