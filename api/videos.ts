@@ -2,7 +2,7 @@
 // No arbitrary video ID, YouTube search term, or channel ID can be requested from clients.
 // The YouTube API key stays server-side. Results are *not* a child-safety certification.
 type Channel = { id?: string; handle?: string; title: string; emoji: string };
-type Video = { id: string; title: string; channelKey: string; channel: string; channelId: string; ageBands: string[]; source: string; durationSeconds?: number; thumbnail?: string; kind?: string };
+type Video = { id: string; title: string; channelKey: string; channel: string; channelId: string; ageBands: string[]; source: string; durationSeconds?: number; thumbnail?: string; kind?: string; publishedAt?: string };
 const CHANNELS: Record<string, Channel> = {
   cocomelon:  { id: 'UCbCmjCuTUZos6Inko4u57UQ', title: 'CoComelon - Nursery Rhymes', emoji:'🍉' },
   kidschannel: { id:'UC3KknIJZXRygH2pZ6MDtGbg', title:'Kids Channel', emoji:'🚂' },
@@ -13,6 +13,7 @@ const CHANNELS: Record<string, Channel> = {
   chuttykannamma: { id:'UC7ekJbGft4swD_3fb7MiRPw', title:'Chutty Kannamma', emoji:'🌈' },
   kidstvtamil: { handle:'@kidstvtamil', title:'Kids TV Tamil', emoji:'🐥' }
 };
+const TAMIL_KEYS = ['chuchutamil','pattampoochi','infobellstamil','shemarootamil','chuttykannamma','kidstvtamil'];
 const ALLOWED_AGES = ['all','2-5','6-9','10-12'];
 const STARTER: Video[] = [
   {id:'2iEpWefmdQI',title:'Best of Wheels on the Bus! CoComelon Nursery Rhymes',channelKey:'cocomelon',channel:'CoComelon - Nursery Rhymes',channelId:'UCbCmjCuTUZos6Inko4u57UQ',ageBands:['2-5'],source:'YouTube',kind:'video'},
@@ -66,7 +67,7 @@ async function channelVideos(key:string, channelKey:string):Promise<Video[]> {
     const title=String(s.title||'').slice(0,180);
     if(!title || !/^[\w-]{11}$/.test(v.id)) continue;
     videos.push({id:v.id,title,channelKey,channel:channel.title,channelId:id,ageBands:['2-5'],source:'YouTube',durationSeconds:seconds,
-      thumbnail:typeof thumbnail==='string' && thumbnail.startsWith('https://i.ytimg.com/')?thumbnail:undefined,kind});
+      thumbnail:typeof thumbnail==='string' && thumbnail.startsWith('https://i.ytimg.com/')?thumbnail:undefined,kind,publishedAt:String(s.publishedAt || '')});
   }
   cache.set(channelKey,{until:Date.now()+30*60*1000,videos});
   return videos;
@@ -77,11 +78,11 @@ export async function GET(request:Request) {
   const channel=url.searchParams.get('channel')||'all';
   const kind=url.searchParams.get('kind')||'video';
   const q=(url.searchParams.get('q')||'').trim().slice(0,60).toLocaleLowerCase();
-  if(!ALLOWED_AGES.includes(age)||!['all',...Object.keys(CHANNELS)].includes(channel)||!['video','short'].includes(kind)) {
+  if(!ALLOWED_AGES.includes(age)||!['all','tamil',...Object.keys(CHANNELS)].includes(channel)||!['video','short'].includes(kind)) {
     return Response.json({error:'Invalid filter'}, {status:400,headers:{'Cache-Control':'no-store'}});
   }
   const apiKey=process.env.YOUTUBE_API_KEY?.trim();
-  const targets=channel==='all'?Object.keys(CHANNELS):[channel];
+  const targets=channel==='all'?Object.keys(CHANNELS):channel==='tamil'?[...TAMIL_KEYS]:[channel];
   let videos:Video[]=[];
   let mode='youtube-live';
   let notice='';
@@ -98,13 +99,35 @@ export async function GET(request:Request) {
   }
   if(mode!=='youtube-live' && kind==='video'){
     // Existing hand-picked cards remain visible when the external API is not configured.
-    videos=STARTER.filter(x=>channel==='all'||x.channelKey===channel);
+    videos=STARTER.filter(x=>channel==='all'||x.channelKey===channel || (channel==='tamil' && TAMIL_KEYS.includes(x.channelKey)));
   }
   videos=videos.filter(v=>v.kind===kind && (age==='all'||v.ageBands.includes(age)) &&
     (!q || v.title.toLocaleLowerCase().includes(q)||v.channel.toLocaleLowerCase().includes(q)));
   const seen=new Set<string>();
   videos=videos.filter(v=>!seen.has(v.id) && Boolean(seen.add(v.id)));
-  videos=videos.slice(0,45);
+  // User preference: freshly published Tamil uploads rank ahead of other channels.
+  // Cap each active channel's share so a single uploader cannot monopolize the page.
+  const newer=(a:Video,b:Video)=> (Date.parse(b.publishedAt || '') || 0)-(Date.parse(a.publishedAt || '') || 0);
+  const recentBalanced=(items:Video[],limit:number)=>{
+    const uniqueChannels=new Set(items.map(item=>item.channelKey)).size;
+    const perChannel=Math.max(1,Math.ceil(limit/Math.max(1,uniqueChannels)));
+    const counts=new Map<string,number>();
+    return items.sort(newer).filter(v=>{
+      const count=counts.get(v.channelKey)||0;
+      if(count>=perChannel) return false;
+      counts.set(v.channelKey,count+1);
+      return true;
+    }).slice(0,limit);
+  };
+  if(channel==='all') {
+    const tamil=videos.filter(v=>TAMIL_KEYS.includes(v.channelKey));
+    const other=videos.filter(v=>!TAMIL_KEYS.includes(v.channelKey));
+    videos=[...recentBalanced(tamil,36),...recentBalanced(other,9)];
+  } else {
+    videos=recentBalanced(videos,kind==='short'?30:45);
+  }
+  // Shorts are displayed one at a time; bound response size for quick mobile loading.
+  if(kind==='short') videos=videos.slice(0,30);
   const exposed=Object.fromEntries(Object.entries(CHANNELS).map(([k,v])=>[k,{title:v.title,emoji:v.emoji,handle:v.handle||null}]));
   return Response.json({videos,channels:exposed,mode,notice,ageLabel:'Suggested suitability only (not verified age-rated content)',
     shortClassification:'Videos tagged #shorts and at most 180 seconds. The Data API cannot verify aspect ratio or official Shorts classification.',

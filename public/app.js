@@ -10,7 +10,7 @@
   const age = document.getElementById('age-select');
   const channelButtons = [...document.querySelectorAll('[data-channel]')];
   const navButtons = [...document.querySelectorAll('.dock-button')];
-  const state = { channel: 'all', requestNumber: 0, videos: [], shorts: [], timer: null, hasLoaded: false };
+  const state = { channel: 'tamil', requestNumber: 0, videos: [], shorts: [], timer: null, hasLoaded: false };
 
   function signedIn() { return Boolean(window.KidLiteAuth?.signedIn); }
   function setNav(view) {
@@ -73,6 +73,14 @@
     play.setAttribute('aria-hidden', 'true');
     play.innerHTML = '<svg viewBox="0 0 24 24"><path fill="#fff" d="m7 3 14 9-14 9z"/></svg>';
     thumbnail.append(image, play);
+    const tamilChannel = ['chuchutamil','pattampoochi','infobellstamil','shemarootamil','chuttykannamma','kidstvtamil'].includes(video.channelKey);
+    const published = Date.parse(video.publishedAt || '');
+    if (tamilChannel && Number.isFinite(published) && Date.now() >= published && Date.now() - published < 14*24*60*60*1000) {
+      const badge = document.createElement('span');
+      badge.className = 'fresh-video-badge';
+      badge.textContent = 'NEW';
+      thumbnail.appendChild(badge);
+    }
     thumbnail.onclick = openVideo;
     const details = document.createElement('div'); details.className = 'video-info';
     const avatar = document.createElement('span');
@@ -145,9 +153,9 @@
     showActivity(fromShorts ? 'Shorts' : 'Now Playing', node => {
       const player = document.createElement('div'); player.className = fromShorts ? 'video-player short' : 'video-player';
       const frame = document.createElement('iframe');
-      frame.src = 'https://www.youtube-nocookie.com/embed/' + video.id + '?rel=0&playsinline=1';
+      frame.src = 'https://www.youtube-nocookie.com/embed/' + video.id + '?rel=0&playsinline=1&autoplay=1';
       frame.title = video.title + ' on YouTube';
-      frame.allow = 'accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen';
+      frame.allow = 'autoplay; accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen';
       frame.allowFullscreen = true;
       frame.loading = 'eager'; frame.referrerPolicy = 'strict-origin-when-cross-origin';
       player.appendChild(frame);
@@ -157,11 +165,12 @@
       const link = document.createElement('a'); link.className = 'youtube-link';
       link.href = fromShorts ? 'https://www.youtube.com/shorts/' + video.id : 'https://www.youtube.com/watch?v=' + video.id;
       link.target = '_blank'; link.rel = 'noopener noreferrer';
-      link.textContent = 'Open on YouTube ↗';
+      link.className = 'youtube-icon-link';
+      link.title = 'Open on YouTube';
+      link.setAttribute('aria-label', 'Open on YouTube');
+      link.innerHTML = '<svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="5" fill="#f03c40"/><path d="m10 5 7 4-7 4z" fill="white"/></svg>';
       linkRow.append(link);
-      const note = document.createElement('p'); note.className = 'player-note';
-      note.textContent = 'YouTube controls playback and may show ads or related videos. Tap Back to stop this video.';
-      node.append(player, heading, channel, linkRow, note);
+      node.append(player, heading, channel, linkRow);
     }, fromShorts ? 'shorts' : 'home', fromShorts ? showShorts : showHome);
   }
 
@@ -209,42 +218,8 @@
   }
 
   function showShorts() {
-    showActivity('Shorts', node => {
-      const note = document.createElement('p');
-      note.className = 'short-note';
-      note.textContent = 'Tagged #shorts videos from your selected YouTube channels. YouTube controls playback.';
-      const grid = document.createElement('div'); grid.className = 'short-feed';
-      const status = document.createElement('p'); status.className = 'feed-status';
-      status.textContent = 'Fetching Shorts…';
-      node.append(note, grid, status);
-      const params = new URLSearchParams({kind:'short',age:age.value,channel:'all'});
-      fetch('/api/videos?' + params.toString()).then(async response => {
-        if (!response.ok) throw new Error('Shorts API unavailable');
-        return response.json();
-      }).then(data => {
-        const videos = Array.isArray(data.videos) ? data.videos.filter(validVideo) : [];
-        state.shorts = videos;
-        grid.replaceChildren();
-        videos.forEach(video => {
-          const card = document.createElement('article'); card.className = 'short-card';
-          const cover = document.createElement('button'); cover.className = 'short-preview'; cover.type = 'button';
-          cover.setAttribute('aria-label', 'Play ' + video.title);
-          const img = document.createElement('img'); img.loading = 'lazy'; img.alt = '';
-          img.src = video.thumbnail || ('https://i.ytimg.com/vi/' + video.id + '/hqdefault.jpg');
-          const play = document.createElement('span'); play.className = 'video-play';
-          play.setAttribute('aria-hidden', 'true');
-          play.innerHTML = '<svg viewBox="0 0 24 24"><path fill="#fff" d="m7 3 14 9-14 9z"/></svg>';
-          cover.append(img,play); cover.onclick = () => showVideo(video,true);
-          const detail = document.createElement('div');
-          const title = document.createElement('p'); title.className = 'short-title'; title.textContent = video.title;
-          const by = document.createElement('p'); by.className = 'short-channel'; by.textContent = video.channel + ' · YouTube';
-          const button = document.createElement('button'); button.type = 'button'; button.className = 'short-watch';
-          button.textContent = 'Watch Short'; button.onclick = () => showVideo(video,true);
-          detail.append(title,by,button); card.append(cover,detail); grid.append(card);
-        });
-        status.textContent = videos.length ? '' : (data.notice || 'No tagged YouTube Shorts available from selected channels yet.');
-      }).catch(() => {status.textContent = 'Could not load YouTube Shorts. Check API key or network.';});
-    },'shorts',showHome);
+    // Fullscreen player opens immediately, with one embed and no list of watch buttons.
+    window.KidLiteShorts.open({ age: age.value, onExit: showHome });
   }
 
   function showSettings() {
@@ -343,7 +318,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v6');
+      const cache=await caches.open('kidlite-offline-v7');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

@@ -60,15 +60,16 @@
       <label class="age-field"><span class="sr-only">Age range</span><select id="age-select" aria-label="Recommended age"><option value="all">Ages 2–12</option><option value="2-5">Ages 2–5</option><option value="6-9">Ages 6–9</option><option value="10-12">Ages 10–12</option></select></label>
     </div>
     <div class="channel-tabs" role="group" aria-label="Channels">
-      <button class="channel-chip selected" type="button" data-channel="all" aria-pressed="true">All</button>
-      <button class="channel-chip" type="button" data-channel="cocomelon" aria-pressed="false">🍉 CoComelon</button>
-      <button class="channel-chip" type="button" data-channel="kidschannel" aria-pressed="false">🚂 Kids Channel</button>
+      <button class="channel-chip selected" type="button" data-channel="tamil" aria-pressed="true">தமிழ் · Tamil</button>
+      <button class="channel-chip" type="button" data-channel="all" aria-pressed="false">All</button>
       <button class="channel-chip" type="button" data-channel="chuchutamil" aria-pressed="false">🎵 ChuChu TV Tamil</button>
       <button class="channel-chip" type="button" data-channel="pattampoochi" aria-pressed="false">🦋 Pattampoochi</button>
       <button class="channel-chip" type="button" data-channel="infobellstamil" aria-pressed="false">🌸 Infobells Tamil</button>
       <button class="channel-chip" type="button" data-channel="shemarootamil" aria-pressed="false">📚 Shemaroo Kids Tamil</button>
       <button class="channel-chip" type="button" data-channel="chuttykannamma" aria-pressed="false">🌈 Chutty Kannamma</button>
       <button class="channel-chip" type="button" data-channel="kidstvtamil" aria-pressed="false">🐥 Kids TV Tamil</button>
+      <button class="channel-chip" type="button" data-channel="cocomelon" aria-pressed="false">🍉 CoComelon</button>
+      <button class="channel-chip" type="button" data-channel="kidschannel" aria-pressed="false">🚂 Kids Channel</button>
     </div>
     <section id="video-feed" class="video-feed" aria-label="Approved YouTube videos" aria-live="polite"></section>
     <div id="feed-status" class="feed-status" role="status"></div>
@@ -86,6 +87,7 @@
 </div>
 <dialog id="install-dialog" class="install-dialog"><form method="dialog"><h2>Install KidLite</h2><p id="install-instructions">Add KidLite to your home screen for quick offline play.</p><button class="primary-button" type="submit">Got it</button></form></dialog>
 <script defer src="/offline-games.js"></script>
+<script defer src="/shorts.js"></script>
 <script defer src="/app.js"></script>
 <script defer src="/auth.js"></script>
 </body>

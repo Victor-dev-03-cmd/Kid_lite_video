@@ -89,6 +89,39 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   }
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
-  assert.match(file('public/app.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v6/);
+  assert.match(file('public/shorts.js'), /kind:'short'/);
+  assert.match(file('public/app.js'), /kidlite-offline-v7/);
+});
+
+test('Tamil feed prioritized and recent uploads sorted server-side', () => {
+  const api = file('api/videos.ts');
+  const html = file('public/index.html');
+  assert.match(api, /TAMIL_KEYS/);
+  assert.match(api, /publishedAt/);
+  assert.match(api, /recentBalanced/);
+  assert.match(api, /channel==='tamil'/);
+  assert.match(html, /data-channel="tamil" aria-pressed="true"/);
+  assert.match(file('public/app.js'), /channel: 'tamil'/);
+});
+test('Shorts tab directly opens one immersive player instead of a list', () => {
+  const js = file('public/shorts.js');
+  const app = file('public/app.js');
+  assert.match(app, /KidLiteShorts\.open/);
+  assert.match(js, /session\.stage\.replaceChildren\(\)/);
+  assert.match(js, /youtube-nocookie\.com\/embed/);
+  assert.match(js, /touchend/);
+  assert.match(js, /ArrowDown/);
+  assert.match(js, /session\.overlay\.remove\(\)/);
+  assert.match(file('public/styles.css'), /body\.shorts-open \.dock/);
+  assert.doesNotMatch(app, /Watch Short/);
+});
+
+test('Fresh Tamil badge and compact normal-player YouTube link work without hiding embed', () => {
+  const app = file('public/app.js');
+  const css = file('public/styles.css');
+  assert.match(app, /fresh-video-badge/);
+  assert.match(app, /youtube-icon-link/);
+  assert.match(app, /youtube-nocookie\.com\/embed/);
+  assert.match(css, /\.shorts-overlay\{/);
+  assert.match(css, /\.fresh-video-badge\{/);
 });

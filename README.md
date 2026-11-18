@@ -73,3 +73,13 @@ The server-only `YOUTUBE_API_KEY` is used for `channels.list`, `playlistItems.li
 **Shorts limitation:** The YouTube Data API doesn't directly expose whether the video is formally classified as a YouTube Short. KidLite shows clips up to 180 seconds that the uploader tags `#shorts` or `#ytshorts`. Their vertical aspect ratio and YouTube Shorts classification cannot be proven with standard public Data API metadata. YouTube playback and related content remain controlled by YouTube. Therefore this feature is provisional and not a certification of child safety.
 
 Do not launch the child-directed product broadly until YouTube child-directed API-client designation, privacy compliance, server-enforced Parent PIN and child data controls are complete. `CLERK_SECRET_KEY` is configured but presence alone does not finish backend authentication.
+
+## Tamil-first video feed and immersive Shorts (Phase 1.8)
+
+- The Home feed now defaults to the **Tamil** group (six selected Tamil channels). **All** also remains selectable.
+- Server uses actual YouTube `publishedAt` metadata to rank **recent Tamil uploads first**. Per-channel limits prevent one prolific uploader from dominating all results. Tamil entries precede other channels in the All feed.
+- A **NEW** badge appears only on Tamil videos with a parseable publish date in the last 14 days.
+- The bottom **Shorts** tab opens a fullscreen 9:16 player directly rather than a list. The title/playlist UI and bottom navigation are hidden during Shorts playback; a Back control exits. Only **one YouTube iframe at a time** is kept in the DOM, and switching clips destroys the previous iframe to stop playback.
+- Arrow Up/Down or Page Up/Down, mouse-wheel (outside the iframe), and swipe from the **dark margins around the player** navigate Shorts. Because YouTube's player is a cross-origin iframe, a swipe performed on top of its video surface cannot reliably be captured by KidLite; covering the player with a gesture overlay would obstruct YouTube controls and is intentionally not implemented.
+- Normal videos stay inside KidLite in the privacy-enhanced YouTube player. The app's own verbose "Open on YouTube" text has been replaced by a compact, accessible YouTube icon. **YouTube may still show "Watch on YouTube", its branding, player controls, ads or related videos inside its iframe; these must not be cropped, obscured, or misrepresented.**
+- This is still a development preview. Server-enforced per-family channel approval, child safety review, YouTube child-directed app designation, PIN and screen-time limits remain outstanding.
