@@ -26,5 +26,6 @@
       "destination": "/index.html",
       "permanent": false
     }
-  ]
+  ],
+  "framework": null
 }

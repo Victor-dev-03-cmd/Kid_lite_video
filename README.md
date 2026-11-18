@@ -42,3 +42,6 @@ The Clerk Dashboard (for configuring API keys) and the KidLite in-app dashboard 
 - The public index is deployed at `/index.html`. The root `/` uses a redirect to that static file to avoid sending the homepage to the Hono function. Vercel Hono routing automatically handles `/api/*`.
 - Node.js is pinned to major 24 for predictable runtime behavior.
 - Set `CLERK_PUBLISHABLE_KEY` (not `VITE_CLERK_PUBLISHABLE_KEY`) in the Vercel production environment.
+
+### Static frontend + API function routing fix
+The site uses the Vercel **Other** framework preset (`framework: null` in `vercel.json`) so files under `public/` are served by the CDN while `api/config.ts` and `api/health.ts` are dedicated Web API-based Vercel Functions. This prevents conflicts between the Hono preset's route rewriting and the vanilla JavaScript frontend. The remaining Hono modules are a Phase 2 scaffold and not active user-facing endpoints yet.
