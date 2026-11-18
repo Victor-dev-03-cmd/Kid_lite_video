@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="KidLite smiling star logo">
+  <rect x="2" y="2" width="60" height="60" rx="19" fill="#F1EAFE"/>
+  <path d="M31.7 10.5 38 23.8l14.6 2.1-10.5 10.3L44.6 51 31.7 44.2 18.7 51l2.5-14.8L10.7 25.9l14.6-2.1Z" fill="#FFCF62"/>
+  <path d="M31.7 10.5 38 23.8l14.6 2.1-10.5 10.3L44.6 51 31.7 44.2 18.7 51l2.5-14.8L10.7 25.9l14.6-2.1Z" fill="none" stroke="#F7AE48" stroke-width="1.8" stroke-linejoin="round"/>
+  <circle cx="26.6" cy="31.7" r="1.9" fill="#583959"/><circle cx="37.1" cy="31.7" r="1.9" fill="#583959"/>
+  <path d="M27.4 36.1q4.5 5.6 9 0" fill="none" stroke="#583959" stroke-width="2.2" stroke-linecap="round"/>
+  <ellipse cx="22.4" cy="36.1" rx="3.1" ry="1.9" fill="#FF9AA6" opacity=".8"/><ellipse cx="41.5" cy="36.1" rx="3.1" ry="1.9" fill="#FF9AA6" opacity=".8"/>
+</svg>

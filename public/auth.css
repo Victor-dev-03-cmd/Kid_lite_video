@@ -1,7 +1,7 @@
 /* Minimal Clerk entry screen; app and home share the same visual language. */
 .auth-layout{max-width:484px;margin:auto;padding:38px 16px 42px;display:grid;justify-items:center}
 .auth-card{width:min(100%,400px);border-radius:22px;background:#fff;border:1px solid #eae8f1;box-shadow:0 10px 38px #33304a0b;padding:24px 19px 20px;text-align:center}
-.auth-brand-mark{width:43px;height:43px;margin:auto auto 12px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,#fa5b97,#8856eb);color:white;font-size:30px}
+.auth-brand-mark{display:block;width:48px;height:48px;margin:0 auto 12px;object-fit:contain;border-radius:14px}
 .auth-card h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.8px}
 .auth-subtitle{font-size:13px;margin:5px 0 16px;color:#7c8290}
 .auth-status{font-size:12px;line-height:1.5;padding:12px;background:#f6f4ff;color:#6854a9;border-radius:12px}

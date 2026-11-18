@@ -40,8 +40,9 @@
     unmountCurrent();
     currentMode = mode;
     signUpButton.textContent = mode === 'signin' ? 'Create an account' : 'Already have an account? Sign in';
-    if (mode === 'signin') state.clerk.mountSignIn(signInNode, { fallbackRedirectUrl: '/' });
-    else state.clerk.mountSignUp(signInNode, { fallbackRedirectUrl: '/' });
+    const appearance = { variables: { fontFamily: '"Inter", system-ui, sans-serif' } };
+    if (mode === 'signin') state.clerk.mountSignIn(signInNode, { fallbackRedirectUrl: '/', appearance });
+    else state.clerk.mountSignUp(signInNode, { fallbackRedirectUrl: '/', appearance });
     mountedMode = mode;
   }
   function showSignedIn() {

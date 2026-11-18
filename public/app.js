@@ -5,7 +5,6 @@
   const activity = document.getElementById('activity-view');
   const authScreen = document.getElementById('auth-screen');
   const dock = document.querySelector('.dock');
-  const parentButton = document.getElementById('parent-btn');
   const navButtons = [...document.querySelectorAll('.dock-button')];
 
   function isSignedIn() { return Boolean(window.KidLiteAuth?.signedIn); }
@@ -25,7 +24,6 @@
     activity.classList.remove('hidden');
     activity.replaceChildren();
     dock.classList.toggle('hidden', !isSignedIn());
-    parentButton.classList.toggle('hidden', !isSignedIn());
 
     const header = document.createElement('div');
     header.className = 'activity-header';
@@ -55,12 +53,10 @@
       authScreen.classList.add('hidden');
       home.classList.remove('hidden');
       dock.classList.remove('hidden');
-      parentButton.classList.remove('hidden');
     } else {
       home.classList.add('hidden');
       authScreen.classList.remove('hidden');
       dock.classList.add('hidden');
-      parentButton.classList.add('hidden');
     }
     window.scrollTo(0, 0);
   }
@@ -111,6 +107,90 @@
     }, view);
   }
 
+
+  function showSettings() {
+    showActivity('Settings', node => {
+      const list = document.createElement('div');
+      list.className = 'settings-list';
+      const caption = text => {
+        const p = document.createElement('p');
+        p.className = 'settings-section-label';
+        p.textContent = text;
+        list.appendChild(p);
+      };
+      const group = () => {
+        const section = document.createElement('div');
+        section.className = 'settings-card';
+        list.appendChild(section);
+        return section;
+      };
+      const item = (groupNode, icon, title, detail, callback, disabled = false) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'settings-row';
+        button.disabled = disabled;
+        const emoji = document.createElement('span');
+        emoji.className = 'settings-row-icon';
+        emoji.textContent = icon;
+        emoji.setAttribute('aria-hidden', 'true');
+        const textBox = document.createElement('span');
+        textBox.className = 'settings-row-text';
+        const label = document.createElement('strong');
+        label.textContent = title;
+        const info = document.createElement('small');
+        info.textContent = detail;
+        textBox.append(label, info);
+        const chevron = document.createElement('span');
+        chevron.className = 'settings-row-end';
+        chevron.textContent = disabled ? 'Soon' : '›';
+        button.append(emoji, textBox, chevron);
+        if (callback) button.onclick = callback;
+        groupNode.appendChild(button);
+        return button;
+      };
+      caption('General');
+      const general = group();
+      item(general, '👤', 'My profile', 'Account & sign out', () => {
+        const clerk = window.KidLiteAuth?.clerk;
+        if (typeof clerk?.openUserProfile === 'function') clerk.openUserProfile();
+        else document.getElementById('clerk-user-button')?.querySelector('button')?.click();
+      });
+      item(general, '✈️', 'Offline Play', 'Stories, lullaby and brain games', showOffline);
+      item(general, '↓', 'Install KidLite', 'Add to home screen', () => document.getElementById('install-btn').click());
+      caption('Preferences');
+      const prefs = group();
+      const motionRow = item(prefs, '✨', 'Reduce motion', 'Simpler animations', null);
+      const end = motionRow.lastElementChild;
+      end.remove();
+      const toggle = document.createElement('input');
+      toggle.type = 'checkbox';
+      toggle.className = 'settings-switch';
+      toggle.setAttribute('aria-label', 'Reduce motion');
+      let saved = false;
+      try { saved = localStorage.getItem('kidlite.reduceMotion') === '1'; } catch (_) {}
+      toggle.checked = saved;
+      document.documentElement.classList.toggle('reduce-motion', saved);
+      toggle.onchange = () => {
+        document.documentElement.classList.toggle('reduce-motion', toggle.checked);
+        try { localStorage.setItem('kidlite.reduceMotion', toggle.checked ? '1' : '0'); } catch (_) {}
+      };
+      motionRow.onclick = event => {
+        if (event.target === toggle) return;
+        toggle.checked = !toggle.checked;
+        toggle.onchange();
+      };
+      motionRow.appendChild(toggle);
+      caption('Parent');
+      const parent = group();
+      item(parent, '🔐', 'Parent controls', 'PIN & screen-time settings', null, true);
+      const foot = document.createElement('p');
+      foot.className = 'settings-footer';
+      foot.textContent = 'KidLite · Early access';
+      list.appendChild(foot);
+      node.appendChild(list);
+    }, 'settings');
+  }
+
   document.querySelectorAll('[data-category]').forEach(btn => {
     btn.onclick = () => {
       const category = btn.dataset.category;
@@ -124,10 +204,10 @@
     btn.onclick = () => {
       if (btn.dataset.view === 'home') showHome();
       else if (btn.dataset.view === 'offline') showOffline();
+      else if (btn.dataset.view === 'settings') showSettings();
       else showUnfinished('Shorts', '🎞️', 'Parent-approved short videos will appear here.', 'shorts');
     };
   });
-  parentButton.onclick = () => showUnfinished('Parent Controls', '🔐', 'PIN, approved channels and screen-time settings are coming soon.');
 
   window.KidLiteApp = { showHome, showOffline };
 

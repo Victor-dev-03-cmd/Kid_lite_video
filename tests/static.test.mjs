@@ -40,3 +40,17 @@ test('Clerk frontend wiring is present and uses the public key config endpoint',
   assert.match(file('public/auth.js'), /clerk\.mountSignUp/);
   assert.match(file('public/auth.js'), /session\.getToken/);
 });
+
+test('Kids UI retains six top-aligned category labels and a working settings tab', () => {
+  const html = file('public/index.html');
+  for (const category of ['Rhymes', 'Stories', 'Science', 'Shorts', 'Brain Games', 'Offline Play']) {
+    assert.ok(html.includes(category), category);
+  }
+  assert.match(html, /data-view="settings"/);
+  assert.doesNotMatch(html, /id="parent-btn"/);
+  assert.match(file('public/styles.css'), /font-family:"Inter"/);
+  assert.match(file('public/styles.css'), /\.category strong\s*\{/);
+  assert.match(file('public/app.js'), /function showSettings\(/);
+  assert.match(file('public/app.js'), /showSettings\(\)/);
+  assert.ok(existsSync(path.join(root, 'public/icons/kidlite-mark.svg')));
+});

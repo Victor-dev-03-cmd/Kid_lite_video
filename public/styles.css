@@ -1,5 +1,5 @@
 /* KidLite — compact illustrated mobile UI */
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-synthesis:none;color:#1d202b;background:#fff}
+:root{font-family:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-synthesis:none;color:#1d202b;background:#fff}
 *{box-sizing:border-box}
 html{background:#fff;-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100vh;padding-bottom:calc(98px + env(safe-area-inset-bottom,0px))}
@@ -90,3 +90,48 @@ button:focus-visible,a:focus-visible{outline:3px solid #6e54e3;outline-offset:3p
  .category strong{font-size:16px}
  .activity-tile{min-height:170px;padding:14px}
 }
+
+/* Visual polish v4 — title alignment, logo, Inter type and 4-tab bottom navigation. */
+html,body,button,input,select,textarea{font-family:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.brand{display:flex;align-items:center;gap:7px;letter-spacing:-1.2px;font-size:24px;font-weight:900}
+.brand-icon{width:36px;height:36px;object-fit:contain;flex-shrink:0}
+.brand .brand-type{display:inline;color:#202338}
+.brand .brand-lite{color:#8c60e9}
+.category{isolation:isolate}
+.category strong{
+  position:absolute;inset:16px 14px auto 16px;z-index:5;display:block;
+  margin:0;padding:0;font-family:"Inter",system-ui,sans-serif;
+  font-size:clamp(14px,4vw,17px);line-height:1.22;font-weight:800;
+  letter-spacing:-.35px;text-align:left;white-space:nowrap;
+  color:#fff;text-shadow:0 1px 3px #00000024;
+  pointer-events:none;
+}
+.category.shorts strong{color:#2d2a33;text-shadow:none}
+.category-art{top:51px;bottom:0;left:0;right:0;height:calc(100% - 51px);width:100%;object-fit:contain;object-position:center bottom}
+.category:before{content:"";z-index:2;position:absolute;top:0;left:0;right:0;height:54px;pointer-events:none;background:linear-gradient(180deg,#00000010,transparent)}
+.category.shorts:before{background:linear-gradient(180deg,#ffffff26,transparent)}
+.dock{grid-template-columns:repeat(4,minmax(0,1fr));width:min(390px,calc(100vw - 26px));gap:2px}
+.dock-button{min-width:0;padding:6px 1px}
+.dock-button span{font-weight:650;font-size:10px;white-space:nowrap;letter-spacing:-.14px}
+.dock-button svg{flex-shrink:0}
+.settings-list{display:grid;gap:12px}
+.settings-card{border:1px solid #eceaf2;background:#fff;border-radius:18px;overflow:hidden}
+.settings-row{width:100%;display:flex;align-items:center;gap:13px;border:0;border-bottom:1px solid #f0eff4;padding:16px;background:#fff;text-align:left;color:#222337}
+.settings-row:last-child{border-bottom:0}
+.settings-row:disabled{opacity:.62;cursor:default}
+.settings-row:not(:disabled):active{background:#f7f5fb}
+.settings-row-icon{height:39px;width:39px;flex-shrink:0;border-radius:13px;display:grid;place-items:center;background:#f5f0ff;font-size:19px}
+.settings-row-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.settings-row-text strong{font-size:14px;font-weight:750;line-height:1.25}
+.settings-row-text small{font-size:12px;color:#888a97;line-height:1.35}
+.settings-row-end{font-size:16px;color:#a0a0ad;font-weight:700}
+.settings-section-label{font-size:11px;color:#8b8a99;text-transform:uppercase;letter-spacing:.8px;font-weight:800;margin:8px 0 0 4px}
+.settings-switch{appearance:none;width:42px;height:25px;border:0;border-radius:99px;background:#e2e3e9;position:relative;flex-shrink:0;cursor:pointer;transition:background .2s}
+.settings-switch:after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:white;box-shadow:0 1px 4px #0002;transition:transform .2s}
+.settings-switch:checked{background:#8b5cf6}
+.settings-switch:checked:after{transform:translateX(17px)}
+.settings-switch:focus-visible{outline:3px solid #8b5cf6;outline-offset:3px}
+.settings-footer{font-size:12px;text-align:center;color:#9696a2;line-height:1.5;margin:15px 0 0}
+.reduce-motion *, .reduce-motion *:before, .reduce-motion *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@media(max-width:375px){.brand{font-size:22px;gap:5px}.brand-icon{width:32px;height:32px}.category strong{top:13px;left:13px;right:10px;font-size:14px}.dock-button span{font-size:9.5px}}
