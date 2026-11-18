@@ -92,3 +92,11 @@ Do not launch the child-directed product broadly until YouTube child-directed AP
 - Native YouTube embed annotations and end-screen suggestions cannot be guaranteed hidden from inside its cross-origin player. The four-item cap applies to KidLite's own suggestions only.
 
 - A distinct **Originals** channel chip is retained as an honest empty state until KidLite-owned original videos are published. It is not mapped to external YouTube videos.
+
+## Phase 1.10: Mobile performance
+- Home adds only 7 video cards at a time with IntersectionObserver, rather than rendering the entire 45-card batch immediately.
+- Cancel outdated video queries on channel/search changes, keep a 3-minute in-memory query cache (up to ten keys) and preserve scroll position after returning from the in-app player.
+- Shorts uses 42–45 px side swipe rails and large previous/next tap controls, plus desktop wheel and keyboard navigation. Swiping on the cross-origin YouTube iframe itself remains under YouTube's control.
+- Only one YouTube player exists during Shorts playback. Navigating to the next clip destroys the prior iframe. Thumbnail prefetching was removed to reduce data usage.
+- The app shell/service worker cache moved to v9, and YouTube audiovisual content remains uncached.
+- This is an engineering performance pass, not a measured speed guarantee; actual phones still need manual scrolling/playback tests.

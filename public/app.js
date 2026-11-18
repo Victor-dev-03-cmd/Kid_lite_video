@@ -9,7 +9,12 @@
   const search = document.getElementById('video-query');
   const channelButtons = [...document.querySelectorAll('[data-channel]')];
   const navButtons = [...document.querySelectorAll('.dock-button')];
-  const state = { channel: 'tamil', requestNumber: 0, videos: [], shorts: [], timer: null, hasLoaded: false };
+  const state = {
+    channel:'tamil',requestNumber:0,videos:[],timer:null,hasLoaded:false,
+    feedCursor:0,feedObserver:null,sentinel:null,fetchController:null,
+    feedCache:new Map(), returnScrollY:0
+  };
+  const FEED_CHUNK = 7;
 
   function signedIn() { return Boolean(window.KidLiteAuth?.signedIn); }
   function setNav(view) {
@@ -60,7 +65,10 @@
   function videoCard(video) {
     const card = document.createElement('article');
     card.className = 'video-card';
-    const openVideo = () => showVideo(video);
+    const openVideo = () => {
+      state.returnScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      showVideo(video);
+    };
     const thumbnail = document.createElement('button');
     thumbnail.type = 'button'; thumbnail.className = 'video-thumbnail';
     thumbnail.setAttribute('aria-label', 'Play ' + video.title);
@@ -68,6 +76,7 @@
     image.src = video.thumbnail || ('https://i.ytimg.com/vi/' + video.id + '/hqdefault.jpg');
     image.alt = '';
     image.loading = 'lazy'; image.decoding = 'async'; image.referrerPolicy = 'no-referrer';
+    image.fetchPriority = state.feedCursor < FEED_CHUNK ? 'auto' : 'low';
     const play = document.createElement('span'); play.className = 'video-play';
     play.setAttribute('aria-hidden', 'true');
     play.innerHTML = '<svg viewBox="0 0 24 24"><path fill="#fff" d="m7 3 14 9-14 9z"/></svg>';
@@ -102,40 +111,99 @@
       ['cocomelon','kidschannel','chuchutamil','pattampoochi','infobellstamil','shemarootamil','chuttykannamma','kidstvtamil'].includes(v.channelKey) &&
       typeof v.title === 'string' && typeof v.channel === 'string';
   }
+  function disconnectFeedObserver() {
+    state.feedObserver?.disconnect();
+    state.feedObserver = null;
+    state.sentinel?.remove();
+    state.sentinel = null;
+  }
+
+  function appendFeedChunk() {
+    if (!state.videos.length) return;
+    state.sentinel?.remove();
+    const end = Math.min(state.feedCursor + FEED_CHUNK, state.videos.length);
+    const chunk = document.createDocumentFragment();
+    for (let i = state.feedCursor; i < end; i++) {
+      chunk.appendChild(videoCard(state.videos[i]));
+    }
+    state.feedCursor = end;
+    feed.appendChild(chunk);
+    if (state.feedCursor < state.videos.length && state.sentinel) {
+      feed.append(state.sentinel);
+      if (state.feedObserver) state.feedObserver.observe(state.sentinel);
+    } else {
+      disconnectFeedObserver();
+    }
+  }
+
+  function displayVideos(videos, notice) {
+    disconnectFeedObserver();
+    state.videos = videos;
+    state.feedCursor = 0;
+    feed.replaceChildren();
+    feedStatus.textContent = videos.length ? (notice || '') : (notice || 'No videos match these channels.');
+    if (!videos.length) return;
+
+    // One near-viewport sentinel. The DOM grows only as the parent scrolls down.
+    const sentinel = document.createElement('button');
+    sentinel.className = 'feed-more-sentinel';
+    sentinel.type = 'button';
+    sentinel.textContent = 'Load more videos';
+    sentinel.onclick = appendFeedChunk;
+    state.sentinel = sentinel;
+
+    if ('IntersectionObserver' in window) {
+      state.feedObserver = new IntersectionObserver(entries => {
+        if (!entries.some(entry => entry.isIntersecting)) return;
+        state.feedObserver?.unobserve(sentinel);
+        appendFeedChunk();
+      },{rootMargin:'650px 0px',threshold:0});
+    }
+    appendFeedChunk();
+  }
+
   async function loadVideos() {
     const requestNumber = ++state.requestNumber;
+    state.fetchController?.abort();
+    state.fetchController = new AbortController();
     const params = new URLSearchParams({
-      age: 'all', channel: state.channel, q: search.value.trim(), kind: 'video'
+      age:'all',channel:state.channel,q:search.value.trim(),kind:'video'
     });
+    const cacheKey = params.toString();
     state.hasLoaded = true;
     if (state.channel === 'originals') {
-      // Original video releases are not available yet; never label third-party YouTube content as ours.
-      state.videos = [];
-      feed.replaceChildren();
-      feedStatus.textContent = 'KidLite Originals videos are coming soon.';
+      displayVideos([], 'KidLite Originals videos are coming soon.');
+      return;
+    }
+    const old = state.feedCache.get(cacheKey);
+    if (old && Date.now() < old.until) {
+      displayVideos(old.videos,old.notice);
       return;
     }
     feedStatus.textContent = 'Loading videos…';
+    disconnectFeedObserver();
     feed.replaceChildren();
     try {
-      const response = await fetch('/api/videos?' + params.toString(), { cache: 'default' });
-      if (!response.ok) throw new Error('Videos unavailable right now');
+      const response = await fetch('/api/videos?' + cacheKey,{
+        cache:'default',signal:state.fetchController.signal
+      });
+      if (!response.ok) throw new Error('Video API unavailable');
       const payload = await response.json();
       if (requestNumber !== state.requestNumber) return;
       const videos = Array.isArray(payload.videos) ? payload.videos.filter(validVideo) : [];
-      state.videos = videos;
-      const fragment = document.createDocumentFragment();
-      videos.forEach(v => fragment.appendChild(videoCard(v)));
-      feed.replaceChildren(fragment);
-      if (videos.length === 0) {
-        feedStatus.textContent = payload.notice || 'No videos match this age or channel. Try another selection.';
-      } else feedStatus.textContent = payload.mode === 'youtube-live' ? '' : 'Starter videos only. Live Tamil-channel videos require a working YouTube API key.';
-    } catch (e) {
-      if (requestNumber !== state.requestNumber) return;
-      feedStatus.textContent = 'Could not load videos. Check your connection and try again.';
-      const retry = document.createElement('button'); retry.className = 'text-button';
-      retry.type = 'button'; retry.textContent = 'Retry'; retry.onclick = loadVideos;
-      feedStatus.append(document.createTextNode(' '), retry);
+      const notice = videos.length
+        ? (payload.mode === 'youtube-live' ? '' : 'Starter videos only; live YouTube API unavailable.')
+        : (payload.notice || 'No videos match these filters.');
+      if (state.feedCache.size >= 10) state.feedCache.delete(state.feedCache.keys().next().value);
+      state.feedCache.set(cacheKey,{videos,notice,until:Date.now()+3*60*1000});
+      displayVideos(videos,notice);
+    } catch (error) {
+      if (requestNumber !== state.requestNumber || error?.name === 'AbortError') return;
+      feedStatus.textContent = 'Could not load videos. Check the connection and retry.';
+      const retry = document.createElement('button');
+      retry.type = 'button';retry.className = 'text-button';retry.textContent = 'Retry';
+      retry.onclick = loadVideos;
+      feedStatus.append(document.createTextNode(' '),retry);
     }
   }
   channelButtons.forEach(button => button.onclick = () => {
@@ -224,7 +292,10 @@
         section.appendChild(list);
         node.appendChild(section);
       }
-    }, 'home', showHome);
+    }, 'home', () => {
+      showHome();
+      requestAnimationFrame(() => window.scrollTo({top:state.returnScrollY,behavior:'instant'}));
+    });
   }
 
   function shortSlides(node, title, scenes) {
@@ -371,7 +442,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v8');
+      const cache=await caches.open('kidlite-offline-v9');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

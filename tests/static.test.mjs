@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v8/);
+  assert.match(file('public/app.js'), /kidlite-offline-v9/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -100,13 +100,13 @@ test('Tamil feed prioritized and recent uploads sorted server-side', () => {
   assert.match(api, /recentBalanced/);
   assert.match(api, /channel==='tamil'/);
   assert.match(html, /data-channel="tamil" aria-pressed="true"/);
-  assert.match(file('public/app.js'), /channel: 'tamil'/);
+  assert.match(file('public/app.js'), /channel:'tamil'/);
 });
 test('Shorts tab directly opens one immersive player instead of a list', () => {
   const js = file('public/shorts.js');
   const app = file('public/app.js');
   assert.match(app, /KidLiteShorts\.open/);
-  assert.match(js, /session\.stage\.replaceChildren\(\)/);
+  assert.match(js, /s\.slot\.replaceChildren\(\)/);
   assert.match(js, /youtube-nocookie\.com\/embed/);
   assert.match(js, /touchend/);
   assert.match(js, /ArrowDown/);
@@ -150,4 +150,27 @@ test('Originals has an explicit truthful empty state', () => {
   assert.match(html, /data-channel="originals"/);
   assert.match(app, /state\.channel === 'originals'/);
   assert.match(app, /Originals videos are coming soon/);
+});
+
+test('Shorts support pointer/touch navigation without prefetching video assets', () => {
+  const js = file('public/shorts.js');
+  const css = file('public/styles.css');
+  assert.match(js, /shorts-swipe-rail/);
+  assert.match(js, /pointerup/);
+  assert.match(js, /touchend/);
+  assert.match(js, /s\.slot\.replaceChildren\(\)/);
+  assert.match(js, /lastSwitch/);
+  assert.doesNotMatch(js, /new Image\(/);
+  assert.match(css, /\.shorts-video-slot/);
+  assert.match(css, /touch-action:none/);
+});
+test('Long video feed batches cards and cancels superseded requests', () => {
+  const js = file('public/app.js');
+  assert.match(js, /FEED_CHUNK = 7/);
+  assert.match(js, /new IntersectionObserver/);
+  assert.match(js, /appendFeedChunk/);
+  assert.match(js, /fetchController\?\.abort\(\)/);
+  assert.match(js, /feedCache:new Map/);
+  assert.match(js, /returnScrollY/);
+  assert.match(js, /requestAnimationFrame/);
 });

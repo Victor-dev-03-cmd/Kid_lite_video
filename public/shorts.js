@@ -1,196 +1,231 @@
-/* Full-viewport Shorts viewer: one YouTube iframe at a time, no list or extra play cards.
-   On mobile, swipe from the margins around the YouTube player. Browser events inside
-   a third-party iframe cannot be intercepted without obstructing its controls. */
+/* KidLite Shorts: ONE active YouTube iframe, with mobile-friendly side swipe rails.
+ * Cross-origin YouTube iframe gestures stay YouTube's; the rails never cover controls. */
 (function () {
   'use strict';
 
-  const allowedChannels = new Set([
+  const approved = new Set([
     'chuchutamil','pattampoochi','infobellstamil','shemarootamil',
     'chuttykannamma','kidstvtamil','cocomelon','kidschannel'
   ]);
-  const responseCache = new Map();
-  let current = null;
+  const cached = new Map();
+  let active = null;
 
-  function valid(video) {
-    return video && typeof video.id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(video.id) &&
-      allowedChannels.has(video.channelKey) &&
-      typeof video.title === 'string' && typeof video.channel === 'string';
+  function valid(v) {
+    return v && typeof v.id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(v.id) &&
+      approved.has(v.channelKey) && typeof v.title === 'string' && typeof v.channel === 'string';
   }
 
   function close() {
-    if (!current) return;
-    const session = current;
-    current = null;
-    session.abort.abort();
-    document.removeEventListener('keydown', onKeys);
-    session.overlay.remove(); // destroy iframe to stop audio/video immediately
+    if (!active) return;
+    const session = active;
+    active = null;
+    session.request.abort();
+    document.removeEventListener('keydown', onKeyDown);
+    // Removing the only YouTube iframe immediately stops audio.
+    session.overlay.remove();
     document.body.classList.remove('shorts-open');
     if (typeof session.onExit === 'function') session.onExit();
   }
 
-  function navigate(direction) {
-    if (!current || !current.items.length) return;
-    const next = current.index + direction;
-    if (next < 0 || next >= current.items.length) return;
-    current.index = next;
-    renderItem();
+  function navigate(delta) {
+    const s = active;
+    if (!s || s.items.length === 0) return;
+    const next = Math.min(s.items.length - 1, Math.max(0, s.index + delta));
+    if (next === s.index) return;
+    if (Date.now() - s.lastSwitch < 230) return; // prevent burst-swipes constructing players
+    s.lastSwitch = Date.now();
+    s.index = next;
+    render();
   }
 
-  function onKeys(event) {
-    if (!current || event.altKey || event.ctrlKey || event.metaKey) return;
+  function onKeyDown(event) {
+    if (!active || event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.key === 'Escape' || event.key === 'Backspace') {
-      event.preventDefault(); close();
-    } else if (['ArrowDown','PageDown',' '].includes(event.key)) {
+      event.preventDefault();
+      close();
+    } else if (['ArrowDown','PageDown'].includes(event.key)) {
       event.preventDefault(); navigate(1);
     } else if (['ArrowUp','PageUp'].includes(event.key)) {
       event.preventDefault(); navigate(-1);
     }
   }
 
-  function toolbar() {
-    const bar = document.createElement('div');
-    bar.className = 'shorts-toolbar';
-    const back = document.createElement('button');
-    back.type = 'button';
-    back.className = 'shorts-back';
-    back.textContent = '←';
-    back.setAttribute('aria-label','Back to videos');
-    back.onclick = close;
+  function makeRail(side) {
+    const rail = document.createElement('div');
+    rail.className = 'shorts-swipe-rail shorts-rail-' + side;
+    rail.setAttribute('aria-label', 'Swipe up or down for another Short');
+    rail.title = 'Swipe up or down here';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'shorts-skip';
+    button.textContent = side === 'left' ? '↑' : '↓';
+    button.setAttribute('aria-label', side === 'left' ? 'Previous Short' : 'Next Short');
+    button.onclick = () => navigate(side === 'left' ? -1 : 1);
+    rail.append(button);
 
-    const attribution = document.createElement('span');
-    attribution.className = 'shorts-attribution';
-    attribution.innerHTML = '<svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="5" fill="#ff3f45"/><path d="m10 5 7 4-7 4z" fill="white"/></svg><span>YouTube Shorts</span>';
-    bar.append(back, attribution);
-    return bar;
+    let start = null;
+    rail.addEventListener('pointerdown', event => {
+      if (event.isPrimary === false || event.target.closest('button')) return;
+      start = {id:event.pointerId, y:event.clientY, x:event.clientX};
+      if (rail.setPointerCapture) {
+        try {rail.setPointerCapture(event.pointerId);} catch (_) {}
+      }
+    });
+    rail.addEventListener('pointerup', event => {
+      if (!start || event.pointerId !== start.id) return;
+      const distanceY = event.clientY - start.y;
+      const distanceX = event.clientX - start.x;
+      start = null;
+      if (Math.abs(distanceY) > 35 && Math.abs(distanceY) > Math.abs(distanceX)) {
+        navigate(distanceY < 0 ? 1 : -1);
+      }
+    });
+    rail.addEventListener('pointercancel', () => {start=null;});
+    // Legacy iPad Safari before Pointer Events support.
+    if (!('PointerEvent' in window)) {
+      let touchStart=null;
+      rail.addEventListener('touchstart', event => {
+        if (event.touches.length !== 1 || event.target.closest('button')) return;
+        touchStart=event.touches[0].clientY;
+      },{passive:true});
+      rail.addEventListener('touchend', event => {
+        if (touchStart === null || !event.changedTouches.length) return;
+        const distance=event.changedTouches[0].clientY-touchStart;
+        touchStart=null;
+        if(Math.abs(distance)>35) navigate(distance < 0 ? 1 : -1);
+      },{passive:true});
+    }
+    rail.addEventListener('click', event => {
+      // Tapping either large rail is a fallback for phones where swiping is unreliable.
+      if (event.target.closest('button')) return;
+      if (event.detail === 0) return;
+      navigate(side === 'left' ? -1 : 1);
+    });
+    return {rail,button};
   }
 
-  function setMessage(message, canRetry) {
-    if (!current) return;
-    const stage = current.stage;
-    stage.replaceChildren();
-    const wrapper = document.createElement('div');
-    wrapper.className = 'shorts-message';
-    const para = document.createElement('p'); para.textContent = message;
-    wrapper.append(para);
-    if (canRetry) {
+  function render() {
+    const s = active;
+    if (!s || !s.items.length) return;
+    const video = s.items[s.index];
+    // One iframe only: replacing the prior node stops playback and memory usage.
+    s.slot.replaceChildren();
+    const holder = document.createElement('div');
+    holder.className = 'shorts-player';
+    const iframe = document.createElement('iframe');
+    iframe.title = video.title + ' — ' + video.channel + ' — YouTube';
+    iframe.src = 'https://www.youtube-nocookie.com/embed/' + video.id + '?playsinline=1&autoplay=1&rel=0';
+    iframe.allow = 'autoplay; encrypted-media; gyroscope; accelerometer; picture-in-picture; fullscreen';
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    iframe.loading = 'eager';
+    holder.append(iframe);
+    s.slot.append(holder);
+    s.counter.textContent = (s.index + 1) + ' / ' + s.items.length;
+    s.description.textContent = video.title + ', ' + video.channel;
+    s.previous.disabled = s.index === 0;
+    s.next.disabled = s.index >= s.items.length - 1;
+
+    // Do not prefetch another thumbnail or player: saves bandwidth on mobile networks.
+  }
+
+  function message(s, text, retry) {
+    s.slot.replaceChildren();
+    const box = document.createElement('div');
+    box.className = 'shorts-message';
+    const textNode = document.createElement('p'); textNode.textContent = text;
+    box.append(textNode);
+    if (retry) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'shorts-retry';
       button.textContent = 'Retry';
-      button.onclick = () => load(current.age);
-      wrapper.append(button);
+      button.onclick = () => fetchVideos(s);
+      box.append(button);
     }
-    stage.append(wrapper);
+    s.slot.append(box);
+    s.previous.disabled = true;
+    s.next.disabled = true;
+    s.counter.textContent = '';
   }
 
-  function renderItem() {
-    const session = current;
-    if (!session || !session.items.length) return;
-    const video = session.items[session.index];
-    session.stage.replaceChildren(); // only ONE heavy iframe at a time
-    const player = document.createElement('div');
-    player.className = 'shorts-player';
-    const frame = document.createElement('iframe');
-    frame.title = video.title + ' — ' + video.channel + ' — YouTube';
-    frame.src = 'https://www.youtube-nocookie.com/embed/' + video.id +
-      '?playsinline=1&autoplay=1&rel=0';
-    frame.referrerPolicy = 'strict-origin-when-cross-origin';
-    frame.allow = 'autoplay; encrypted-media; gyroscope; accelerometer; picture-in-picture; fullscreen';
-    frame.allowFullscreen = true;
-    frame.loading = 'eager';
-    player.append(frame);
-    session.stage.append(player);
-    session.description.textContent = video.title + ' · ' + video.channel +
-      ' · ' + (session.index + 1) + ' of ' + session.items.length;
-  }
-
-  function setupGestures(session) {
-    let startY = null;
-    let lastWheel = 0;
-    // Touch gestures work on outer margins; YouTube owns touches inside its iframe.
-    session.overlay.addEventListener('touchstart', event => {
-      if (event.touches.length !== 1) return;
-      if (event.target.closest('button')) return;
-      startY = event.touches[0].clientY;
-    }, {passive:true});
-    session.overlay.addEventListener('touchend', event => {
-      if (startY === null || !event.changedTouches.length) return;
-      const delta = event.changedTouches[0].clientY - startY;
-      startY = null;
-      if (Math.abs(delta) > 48) navigate(delta < 0 ? 1 : -1);
-    }, {passive:true});
-    session.overlay.addEventListener('wheel', event => {
-      if (Math.abs(event.deltaY) < 20) return;
-      event.preventDefault();
-      const now = Date.now();
-      if (now - lastWheel < 650) return;
-      lastWheel = now;
-      navigate(event.deltaY > 0 ? 1 : -1);
-    }, {passive:false});
-  }
-
-  async function load(age) {
-    if (!current) return;
-    const session = current;
-    session.abort.abort();
-    session.abort = new AbortController();
-    setMessage('Loading Shorts…', false);
+  async function fetchVideos(s) {
+    if (active !== s) return;
+    s.request.abort();
+    s.request = new AbortController();
+    message(s, 'Loading Shorts…', false);
     try {
-      const key = age;
-      const saved = responseCache.get(key);
-      let payload;
-      if (saved && Date.now() < saved.expires) {
-        payload = saved.data;
+      const saved = cached.get(s.age);
+      let data;
+      if (saved && Date.now() < saved.until) {
+        data = saved.value;
       } else {
-        const params = new URLSearchParams({kind:'short',channel:'all',age});
-        const response = await fetch('/api/videos?' + params, {signal:session.abort.signal});
-        if (!response.ok) throw new Error('Could not load Shorts');
-        payload = await response.json();
-        responseCache.set(key, {data:payload,expires:Date.now() + 5*60*1000});
+        const params = new URLSearchParams({kind:'short',channel:'all',age:s.age});
+        const response = await fetch('/api/videos?' + params, {signal:s.request.signal});
+        if (!response.ok) throw new Error('Shorts fetch failed');
+        data = await response.json();
+        cached.set(s.age, {value:data,until:Date.now()+3*60*1000});
       }
-      if (current !== session) return;
-      const entries = Array.isArray(payload.videos) ? payload.videos.filter(valid) : [];
-      session.items = entries.slice(0,30);
-      session.index = 0;
-      if (!session.items.length) {
-        setMessage(payload.notice || 'No Shorts found for this selection.', true);
-        return;
-      }
-      renderItem();
+      if (active !== s) return;
+      s.items = Array.isArray(data.videos) ? data.videos.filter(valid).slice(0,30) : [];
+      s.index = 0;
+      s.lastSwitch = 0;
+      if (s.items.length) render();
+      else message(s, data.notice || 'No Shorts found for these channels.', true);
     } catch (error) {
-      if (current !== session || error?.name === 'AbortError') return;
-      setMessage('Unable to load Shorts. Please check your internet connection.', true);
+      if (active !== s || error?.name === 'AbortError') return;
+      message(s, 'Shorts could not load. Check the internet connection.', true);
     }
   }
 
   function open(options = {}) {
-    if (current) return;
+    if (active) return;
     const age = ['all','2-5','6-9','10-12'].includes(options.age) ? options.age : 'all';
     const overlay = document.createElement('section');
     overlay.id = 'shorts-viewer';
     overlay.className = 'shorts-overlay';
     overlay.setAttribute('role','dialog');
     overlay.setAttribute('aria-modal','true');
-    overlay.setAttribute('aria-label','YouTube Shorts viewer');
-    const top = toolbar();
-    const stage = document.createElement('div');
-    stage.className = 'shorts-stage';
+    overlay.setAttribute('aria-label','YouTube Shorts player');
+    const header = document.createElement('div');
+    header.className = 'shorts-toolbar';
+    const back = document.createElement('button');
+    back.className = 'shorts-back'; back.type = 'button';
+    back.textContent = '←'; back.setAttribute('aria-label','Back to home');
+    back.onclick = close;
+    const source = document.createElement('span');
+    source.className = 'shorts-attribution'; source.textContent = 'YouTube Shorts';
+    const counter = document.createElement('span'); counter.className = 'shorts-counter';
+    header.append(back,source,counter);
+
+    const stage = document.createElement('div'); stage.className = 'shorts-stage';
+    const left = makeRail('left');
+    const right = makeRail('right');
+    const slot = document.createElement('div'); slot.className = 'shorts-video-slot';
+    stage.append(left.rail,slot,right.rail);
     const description = document.createElement('p');
-    description.className = 'sr-only';
-    description.setAttribute('aria-live','polite');
-    // No overlays obscure YouTube player controls.
-    overlay.append(top, stage, description);
-    current = {
-      overlay,stage,description,items:[],index:0,age,
-      abort:new AbortController(),onExit:options.onExit
+    description.className = 'sr-only'; description.setAttribute('aria-live','polite');
+    overlay.append(header,stage,description);
+    const s = {
+      overlay,slot,items:[],index:0,age,lastSwitch:0,request:new AbortController(),
+      previous:left.button,next:right.button,counter,description,onExit:options.onExit
     };
-    setupGestures(current);
+    active = s;
+    // Mouse-wheel navigation is throttled; no fixed scroll container is created.
+    let lastWheel = 0;
+    stage.addEventListener('wheel', event => {
+      if (Math.abs(event.deltaY) < 20) return;
+      event.preventDefault();
+      if (Date.now() - lastWheel < 500) return;
+      lastWheel = Date.now();
+      navigate(event.deltaY > 0 ? 1 : -1);
+    },{passive:false});
     document.body.append(overlay);
     document.body.classList.add('shorts-open');
-    document.addEventListener('keydown', onKeys);
-    top.querySelector('button')?.focus();
-    load(age);
+    document.addEventListener('keydown',onKeyDown);
+    back.focus();
+    fetchVideos(s);
   }
 
-  window.KidLiteShorts = {open, close, get isOpen(){return Boolean(current);}};
+  window.KidLiteShorts = {open,close,get isOpen(){return Boolean(active);}};
 })();
