@@ -363,13 +363,27 @@
       frame.referrerPolicy = 'strict-origin-when-cross-origin';
       frameHolder.append(frame);
 
+      // Only a slim app-owned bottom handle remains visible during playback.
+      // A child can tap the handle or swipe up from the very bottom to reveal
+      // the KidLite-only suggestions; the YouTube player itself stays unobscured.
+      const peek=document.createElement('div');
+      peek.className='player-suggestion-peek';
+      peek.tabIndex=0;
+      peek.setAttribute('role','button');
+      peek.setAttribute('aria-label','Show more KidLite videos');
+      peek.setAttribute('aria-expanded','false');
+      const grip=document.createElement('span');
+      grip.className='player-suggestion-peek-line';
+      grip.setAttribute('aria-hidden','true');
+      peek.append(grip);
       const expandedSuggestions = document.createElement('section');
       expandedSuggestions.className = 'player-fullscreen-recommendations';
+      expandedSuggestions.hidden=true;
       expandedSuggestions.setAttribute('aria-label','Suggested approved videos — swipe thumbnails sideways');
       const fullscreenList = document.createElement('div');
       fullscreenList.className = 'player-fullscreen-recommendation-list';
       expandedSuggestions.append(fullscreenList);
-      shell.append(toolbar,frameHolder,expandedSuggestions);
+      shell.append(toolbar,frameHolder,peek,expandedSuggestions);
 
       const metadata = document.createElement('div');
       metadata.className = 'player-meta';
@@ -377,20 +391,13 @@
       channel.className = 'player-channel';
       const actions = document.createElement('div');
       actions.className = 'player-actions';
-      const youtubeLink = document.createElement('a');
-      youtubeLink.className = 'youtube-icon-link';
-      youtubeLink.target = '_blank';
-      youtubeLink.rel = 'noopener noreferrer';
-      youtubeLink.title = 'Open on YouTube';
-      youtubeLink.setAttribute('aria-label','Open on YouTube');
-      youtubeLink.innerHTML = '<svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="5" fill="#f03c40"/><path d="m10 5 7 4-7 4z" fill="white"/></svg>';
       const expand = document.createElement('button');
       expand.className = 'player-expand';
       expand.type = 'button';
       expand.setAttribute('aria-label','Fullscreen landscape video');
       expand.title = 'Fullscreen landscape';
       expand.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Expand</span>';
-      actions.append(youtubeLink,expand);
+      actions.append(expand);
       metadata.append(channel,actions);
       const status = document.createElement('p');
       status.className = 'player-orientation-status';
@@ -409,6 +416,45 @@
       let disposed = false;
       let orientationLocked = false;
       let enteredFullscreen = false;
+      let drawerTimeout=null;
+      function hideSuggestions(){
+        if(drawerTimeout!==null){clearTimeout(drawerTimeout);drawerTimeout=null;}
+        expandedSuggestions.hidden=true;
+        peek.setAttribute('aria-expanded','false');
+      }
+      function revealSuggestions(){
+        if(disposed || document.fullscreenElement!==shell || !fullscreenList.children.length)return;
+        expandedSuggestions.hidden=false;
+        peek.setAttribute('aria-expanded','true');
+        if(drawerTimeout!==null)clearTimeout(drawerTimeout);
+        // A short choice window, then restore maximum space to the video.
+        drawerTimeout=setTimeout(()=>{hideSuggestions();},9500);
+      }
+      peek.onclick=revealSuggestions;
+      peek.onkeydown=event=>{
+        if(event.key==='Enter'||event.key===' '){
+          event.preventDefault();revealSuggestions();
+        }
+      };
+      let gestureStartY=null;
+      peek.addEventListener('pointerdown',event=>{gestureStartY=event.clientY;});
+      peek.addEventListener('pointerup',event=>{
+        if(gestureStartY!==null && gestureStartY-event.clientY>14)revealSuggestions();
+        gestureStartY=null;
+      });
+      peek.addEventListener('pointercancel',()=>{gestureStartY=null;});
+      // Tapping the app-owned fullscreen header (not YouTube iframe)
+      // also reveals the drawer. The Exit button remains independent.
+      toolbar.addEventListener('click',event=>{
+        if(event.target===exit||exit.contains(event.target))return;
+        revealSuggestions();
+      });
+      expandedSuggestions.addEventListener('pointerdown',()=>{
+        if(drawerTimeout!==null){clearTimeout(drawerTimeout);drawerTimeout=null;}
+      });
+      expandedSuggestions.addEventListener('pointerup',()=>{
+        if(!expandedSuggestions.hidden)revealSuggestions();
+      });
 
       const createSuggestion = (suggested,compact) => {
         const button = document.createElement('button');
@@ -437,7 +483,7 @@
         suggestionsList.replaceChildren(...results.map(item => createSuggestion(item,false)));
         fullscreenList.replaceChildren(...results.map(item => createSuggestion(item,true)));
         suggestionsTitle.textContent = 'More videos (' + results.length + ')';
-        expandedSuggestions.hidden = results.length === 0;
+        if(!results.length)hideSuggestions();
         suggestionsSection.hidden = results.length === 0;
       };
       const changeVideo = selected => {
@@ -449,12 +495,11 @@
         frame.src = videoUrl(current);
         frame.title = current.title + ' on YouTube';
         channel.textContent = current.channel + ' · YouTube';
-        youtubeLink.href = 'https://www.youtube.com/watch?v=' + current.id;
+        hideSuggestions();
         renderSuggestions();
         if(document.fullscreenElement !== shell)node.scrollIntoView({block:'start',behavior:'instant'});
       };
       channel.textContent = current.channel + ' · YouTube';
-      youtubeLink.href = 'https://www.youtube.com/watch?v=' + current.id;
       renderSuggestions();
       const unlockOrientation = () => {
         if (!orientationLocked) return;
@@ -464,6 +509,7 @@
       const onFullscreenChange = () => {
         const inFullscreen = document.fullscreenElement === shell;
         if (enteredFullscreen && !inFullscreen) {
+          hideSuggestions();
           enteredFullscreen = false;
           unlockOrientation();
           status.textContent = '';
@@ -472,6 +518,7 @@
       };
       const dispose = () => {
         if (disposed) return;
+        hideSuggestions();
         disposed = true;
         document.removeEventListener('fullscreenchange',onFullscreenChange);
         unlockOrientation();
@@ -502,6 +549,7 @@
           await shell.requestFullscreen({navigationUI:'hide'});
           if (disposed || document.fullscreenElement !== shell) return;
           enteredFullscreen = true;
+          hideSuggestions();
           if (typeof window.screen.orientation?.lock === 'function') {
             try {
               await window.screen.orientation.lock('landscape');
@@ -772,7 +820,7 @@
     const indicator=document.getElementById('offline-ready-indicator');
     if(!indicator || !('caches' in window)) return;
     try {
-      const cache=await caches.open('kidlite-offline-v20');
+      const cache=await caches.open('kidlite-offline-v21');
       const required=['/index.html','/offline-games.js','/app.js','/styles.css','/art/offline.svg'];
       const matches=await Promise.all(required.map(path=>cache.match(path)));
       const ready=matches.every(Boolean);

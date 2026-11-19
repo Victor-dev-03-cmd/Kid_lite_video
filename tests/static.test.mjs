@@ -89,7 +89,7 @@ test('Selected Tamil channel handles and server Shorts fetch are present', () =>
   assert.match(api, /playlistItems/);
   assert.match(api, /contentDetails/);
   assert.match(file('public/shorts.js'), /kind:'short'/);
-  assert.match(file('public/app.js'), /kidlite-offline-v20/);
+  assert.match(file('public/app.js'), /kidlite-offline-v21/);
 });
 
 test('Tamil feed prioritized and recent uploads sorted server-side', () => {
@@ -116,11 +116,11 @@ test('Shorts tab directly opens one immersive player instead of a list', () => {
   assert.doesNotMatch(app, /Watch Short/);
 });
 
-test('Fresh Tamil badge and compact normal-player YouTube link work without hiding embed', () => {
+test('Fresh Tamil badge and approved in-app suggestions work without hiding embed', () => {
   const app = file('public/app.js');
   const css = file('public/styles.css');
   assert.match(app, /fresh-video-badge/);
-  assert.match(app, /youtube-icon-link/);
+  assert.doesNotMatch(app, /className = 'youtube-icon-link'/);
   assert.match(app, /youtube-nocookie\.com\/embed/);
   assert.match(css, /\.shorts-overlay\{/);
   assert.match(css, /\.fresh-video-badge\{/);
@@ -184,7 +184,7 @@ test('Installed PWA supports fullscreen with fallback and script is locally cach
   assert.match(html,/src="\/catalogue\.js"/);
   assert.match(html,/apple-mobile-web-app-capable/);
   const worker=file('public/sw.js');
-  assert.match(worker,/kidlite-offline-v20/);
+  assert.match(worker,/kidlite-offline-v21/);
   assert.match(worker,/\/catalogue\.js/);
   assert.match(worker,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -216,7 +216,7 @@ test('Offline Play offers saved titles but does not pretend YouTube plays offlin
   assert.match(app,/YouTube playback needs internet/);
   assert.match(app,/window\.KidLiteCatalogue\.synchronize\(true\)/);
   assert.match(app,/window\.KidLiteCatalogue\.clear\(\)/);
-  assert.match(app,/kidlite-offline-v20/);
+  assert.match(app,/kidlite-offline-v21/);
 });
 
 test('First-visit browser install invitation replaces top install button',()=>{
@@ -294,7 +294,7 @@ test('Now Playing never crops or shields YouTube embedded controls',()=>{
   const app=file('public/app.js'),css=file('public/styles.css');
   assert.match(app,/youtube-nocookie\.com\/embed/);
   assert.match(app,/frame\.allowFullscreen = true/);
-  assert.match(app,/youtube-icon-link/);
+  assert.doesNotMatch(app,/className = 'youtube-icon-link'/);
   assert.match(app,/result\.length < SUGGESTION_LIMIT/);
   assert.doesNotMatch(app,/player-touch-shield|youtube-crop|controls=0/);
   assert.doesNotMatch(css,/height:\s*calc\(100%\s*\+\s*120px\)/);
@@ -379,10 +379,10 @@ test('Refresh uses fresh local seed without duplicating YouTube provider calls',
   assert.match(shorts,/sessionSeed:/);
   const sw=file('public/sw.js');
   assert.match(sw,/\/freshness\.js/);
-  assert.match(sw,/kidlite-offline-v20/);
+  assert.match(sw,/kidlite-offline-v21/);
 });
 
-test('Expanded videos show a permanent swipeable suggested-thumbnail strip',()=>{
+test('Expanded videos show an on-demand app-owned suggested-thumbnail drawer',()=>{
   const app=file('public/app.js'),css=file('public/styles.css');
   assert.match(css,/\.player-shell:fullscreen/);
   assert.match(css,/width:100vw!important/);
@@ -457,13 +457,14 @@ test('Expanded long video shelf has no Up next button and exposes twelve suggest
   assert.match(app,/toolbar\.append\(exit,fullLabel\)/);
   assert.doesNotMatch(app,/upNext\.onclick/);
   assert.doesNotMatch(app,/player-fullscreen-next-toggle/);
-  assert.match(app,/expandedSuggestions\.hidden = results\.length === 0/);
+  assert.match(app,/expandedSuggestions\.hidden=true/);
+  assert.match(app,/if\(!results\.length\)hideSuggestions\(\)/);
   assert.match(app,/fullscreenList\.replaceChildren/);
   assert.match(app,/suggestionsList\.replaceChildren/);
   assert.match(app,/button\.onclick = \(\) => changeVideo\(suggested\)/);
   assert.match(css,/scroll-snap-type:x proximity/);
   assert.match(css,/touch-action:pan-x/);
-  assert.match(css,/height:82px!important/);
+  assert.match(css,/height:88px!important/);
 });
 
 test('Offline Video Pack is available from Offline Play and Settings but lazy-loaded',()=>{
@@ -496,7 +497,7 @@ test('Rights-cleared media downloads are verified and bounded to 100 MB total',(
 });
 test('Offline media is not double cached by service worker',()=>{
   const sw=file('public/sw.js');
-  assert.match(sw,/kidlite-offline-v20/);
+  assert.match(sw,/kidlite-offline-v21/);
   assert.match(sw,/\/offline-pack\.js/);
   assert.match(sw,/\/offline-pack-ui\.js/);
   assert.match(sw,/\/offline-video-manifest\.json/);
@@ -550,4 +551,39 @@ test('Iconsax back arrows stay centered in 44px mobile touch targets',()=>{
   assert.match(css,/height:44px!important/);
   assert.match(css,/padding:0!important/);
   assert.match(css,/line-height:0!important/);
+});
+
+test('Fullscreen suggestions start hidden and can be summoned by touch on KidLite chrome',()=>{
+  const app=file('public/app.js'),css=file('public/styles.css');
+  assert.match(app,/peek\.className='player-suggestion-peek'/);
+  assert.match(app,/peek\.setAttribute\('role','button'\)/);
+  assert.match(app,/peek\.setAttribute\('aria-expanded','false'\)/);
+  assert.match(app,/expandedSuggestions\.hidden=true/);
+  assert.match(app,/shell\.append\(toolbar,frameHolder,peek,expandedSuggestions\)/);
+  assert.match(app,/function revealSuggestions\(\)/);
+  assert.match(app,/peek\.onclick=revealSuggestions/);
+  assert.match(app,/toolbar\.addEventListener\('click'/);
+  assert.match(app,/expandedSuggestions\.hidden=false/);
+  assert.match(app,/drawerTimeout=setTimeout\(\(\)=>\{hideSuggestions\(\);\},9500\)/);
+  assert.match(app,/function hideSuggestions\(\)/);
+  assert.match(app,/if\(!results\.length\)hideSuggestions\(\)/);
+  assert.match(app,/hideSuggestions\(\);\s*renderSuggestions\(\)/);
+  assert.match(app,/document\.fullscreenElement!==shell/);
+  assert.match(css,/\.player-suggestion-peek\{display:none\}/);
+  assert.match(css,/\.player-suggestion-peek-line/);
+  assert.match(css,/height:18px/);
+  assert.match(css,/\.player-fullscreen-recommendations\[hidden\]/);
+  assert.match(css,/flex:0 0 0!important/);
+  assert.match(css,/flex:0 0 36px!important/);
+});
+test('Main player shows only app-approved recommendations outside its YouTube iframe',()=>{
+  const app=file('public/app.js');
+  assert.match(app,/https:\/\/www\.youtube-nocookie\.com\/embed/);
+  assert.match(app,/rel=0&playsinline=1&autoplay=1/);
+  assert.match(app,/const SUGGESTION_LIMIT = 12/);
+  assert.match(app,/button\.onclick = \(\) => changeVideo\(suggested\)/);
+  assert.match(app,/frame\.src = videoUrl\(current\)/);
+  assert.doesNotMatch(app,/className = 'youtube-icon-link'/);
+  assert.doesNotMatch(app,/Open on YouTube/);
+  assert.doesNotMatch(app,/player-touch-shield|youtube-crop|controls=0/);
 });

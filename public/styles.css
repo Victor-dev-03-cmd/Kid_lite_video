@@ -628,3 +628,78 @@ html:has(.home-view:not(.hidden)){overscroll-behavior-y:contain}
 .top-icon svg.iconsax-icon,.search-field svg.iconsax-icon{width:22px;height:22px;fill:none}
 .settings-row-end{display:grid;place-items:center;flex:0 0 20px;min-height:20px}
 .settings-row-end .iconsax-icon{width:18px;height:18px}
+
+
+/* Phase 1.22 — video-first fullscreen. The recommendations are an ON-DEMAND
+   drawer, not a permanently visible filmstrip. Never cover the YouTube iframe:
+   the drawer reallocates space BELOW it only while the viewer is choosing. */
+.player-suggestion-peek{display:none}
+.player-shell:fullscreen .player-fullscreen-toolbar,
+.player-shell:-webkit-full-screen .player-fullscreen-toolbar{
+  box-sizing:border-box!important;
+  height:36px!important;min-height:36px!important;
+  flex:0 0 36px!important;
+  padding:0 11px!important;
+}
+.player-shell:fullscreen .player-suggestion-peek,
+.player-shell:-webkit-full-screen .player-suggestion-peek{
+  display:flex!important;
+  box-sizing:border-box!important;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:18px;
+  min-height:18px;
+  flex:0 0 18px;
+  background:#101014;
+  cursor:pointer;
+  touch-action:pan-y;
+}
+.player-suggestion-peek-line{
+  display:block;
+  width:42px;height:4px;
+  background:#c6c3cf;
+  opacity:.75;
+  border-radius:999px;
+  transition:width .2s ease,opacity .2s ease;
+  pointer-events:none;
+}
+.player-suggestion-peek[aria-expanded="true"] .player-suggestion-peek-line{width:56px;opacity:1}
+.player-suggestion-peek:focus-visible{outline:2px solid #a795ff;outline-offset:-2px}
+.player-shell:fullscreen .player-fullscreen-recommendations[hidden],
+.player-shell:-webkit-full-screen .player-fullscreen-recommendations[hidden]{
+  display:none!important;
+  height:0!important;
+  min-height:0!important;
+  flex:0 0 0!important;
+  padding:0!important;
+  border:0!important;
+}
+/* The drawer is part of the fullscreen flex layout, not an iframe overlay.
+   The extra video height is returned immediately when it closes. */
+.player-shell:fullscreen .player-fullscreen-recommendations:not([hidden]),
+.player-shell:-webkit-full-screen .player-fullscreen-recommendations:not([hidden]){
+  height:88px!important;
+  min-height:0!important;
+  flex:0 0 88px!important;
+  padding:6px 10px!important;
+  animation:kidlite-gallery-in .15s ease-out;
+}
+@keyframes kidlite-gallery-in{
+  from{opacity:.4}
+  to{opacity:1}
+}
+@media(max-height:380px) and (orientation:landscape){
+  .player-shell:fullscreen .player-fullscreen-toolbar,
+  .player-shell:-webkit-full-screen .player-fullscreen-toolbar{
+    height:32px!important;min-height:32px!important;flex-basis:32px!important;
+  }
+  .player-shell:fullscreen .player-fullscreen-recommendations:not([hidden]),
+  .player-shell:-webkit-full-screen .player-fullscreen-recommendations:not([hidden]){
+    height:78px!important;flex-basis:78px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .player-shell:fullscreen .player-fullscreen-recommendations{animation:none!important}
+  .player-suggestion-peek-line{transition:none!important}
+}

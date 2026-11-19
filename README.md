@@ -204,3 +204,12 @@ Their source IDs/handles are fixed server-side, never user-supplied to the YouTu
 - Replaced Home / Shorts / Offline / Settings dock artwork, search and notification icons with integrated Iconsax icon shapes. Settings navigation chevrons use Iconsax arrow-right. Accessible button labels remain.
 - Eight selected Iconsax/Vuesax shapes are embedded within public/iconsax.js, obtained from glenthemes/iconsax and used as a part of this application. They use currentColor, have no font files and make no network request at runtime; the script is precached by service worker v20.
 - Playback, swipes, downloads and privacy settings remain unchanged.
+
+## Phase 1.22 — Video-first fullscreen / suggestions on demand
+
+- Landscape fullscreen now starts with the KidLite thumbnail shelf **hidden**. This returns almost all previously consumed 82 px to the YouTube iframe, giving the video more vertical room. Fullscreen toolbar is compact (32–36 px).
+- A slim app-owned **bottom drag handle** (18 px) and the fullscreen KidLite header are touch targets to reveal KidLite's up-to-12 approved-video gallery. No corner Up-next button. The gallery is below the iframe, never over the YouTube controls. It closes automatically after 9.5 seconds of inactivity or immediately after choosing another video, leaving fullscreen orientation unchanged.
+- The extra KidLite Open-on-YouTube button in Now Playing is removed, decreasing inadvertent external navigation from the app UI.
+- The **YouTube iframe itself can still show its own title, cards, branding and related videos**, and tapping them may navigate away; this cannot be disabled or intercepted reliably by a same-origin parent. The supported rel=0 already limits end recommendations to the same uploader but does not hide them. Do not cover the iframe or mask YouTube player interaction just to hide these cards.
+- 12 approved suggestions are still visible below the player in normal portrait mode. No change to Shorts, downloaded original media, or user data. SW shell v21.
+- Real-device fullscreen rendering and touch behavior remain to be verified.
